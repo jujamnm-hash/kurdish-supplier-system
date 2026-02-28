@@ -194,13 +194,29 @@
       </div>
 
       <!-- Recent Products -->
-      <div class="custom-table">
+      <div class="custom-table mb-4">
         <div style="padding:1.25rem;border-bottom:1px solid var(--card-border);display:flex;justify-content:space-between;align-items:center">
           <h6 style="margin:0;color:var(--text-light)">📦 کالاکانی دوایین</h6>
           <button class="filter-btn" onclick="showSection('my-products')">هەموو ببینە</button>
         </div>
         <div id="recent-products-table">
           <div class="empty-state"><div class="empty-icon">📦</div><h4>هێشتا کالایەک نییە</h4></div>
+        </div>
+      </div>
+
+      <!-- Charts Row -->
+      <div class="row g-4">
+        <div class="col-lg-5">
+          <div class="glass-card p-3">
+            <h6 style="margin-bottom:1rem;color:var(--text-light)">🍧 دابەشبوونی پۆلەکان</h6>
+            <canvas id="dash-cat-chart" height="220"></canvas>
+          </div>
+        </div>
+        <div class="col-lg-7">
+          <div class="glass-card p-3">
+            <h6 style="margin-bottom:1rem;color:var(--text-light)">📈 زۆرترین بینینی کالاکان</h6>
+            <canvas id="dash-views-chart" height="220"></canvas>
+          </div>
         </div>
       </div>
     </section>
@@ -405,6 +421,7 @@
   </main>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
 <script src="js/categories.js"></script>
 <script src="js/auth.js"></script>
@@ -486,6 +503,8 @@
   }
 
   // ===== STATS =====
+  let dashCatChart = null, dashViewsChart = null;
+
   function renderOverviewStats() {
     const myProds = Products.getBySupplier(currentUser.id);
     const active = myProds.filter(p => p.active).length;
@@ -496,6 +515,45 @@
     document.getElementById('stat-active').textContent = active;
     document.getElementById('stat-views').textContent = views;
     document.getElementById('stat-cats').textContent = cats;
+
+    // Category doughnut
+    const catCounts = {};
+    myProds.forEach(p => { catCounts[p.category] = (catCounts[p.category] || 0) + 1; });
+    const catLabels = Object.keys(catCounts).map(id => getCategoryIcon(id) + ' ' + getCategoryName(id));
+    const catData = Object.values(catCounts);
+    const palette = ['#6c63ff','#43e97b','#f7971e','#f9ca24','#e84393','#2980b9','#8e44ad','#e67e22'];
+
+    if (dashCatChart) dashCatChart.destroy();
+    const catCtx = document.getElementById('dash-cat-chart');
+    if (catCtx && catData.length) {
+      dashCatChart = new Chart(catCtx, {
+        type: 'doughnut',
+        data: { labels: catLabels, datasets: [{ data: catData, backgroundColor: palette, borderWidth: 0 }] },
+        options: { plugins: { legend: { labels: { color: '#c5c5d8', font: { family: 'Noto Sans Arabic' } } } }, cutout: '65%' }
+      });
+    }
+
+    // Top views bar
+    const topProds = [...myProds].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 6);
+    if (dashViewsChart) dashViewsChart.destroy();
+    const viewsCtx = document.getElementById('dash-views-chart');
+    if (viewsCtx && topProds.length) {
+      dashViewsChart = new Chart(viewsCtx, {
+        type: 'bar',
+        data: {
+          labels: topProds.map(p => p.name.length > 14 ? p.name.slice(0, 14) + '...' : p.name),
+          datasets: [{ label: 'بینین', data: topProds.map(p => p.views || 0),
+            backgroundColor: 'rgba(108,99,255,0.7)', borderRadius: 6, borderWidth: 0 }]
+        },
+        options: {
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { ticks: { color: '#c5c5d8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+            x: { ticks: { color: '#c5c5d8', font: { family: 'Noto Sans Arabic', size: 11 } }, grid: { display: false } }
+          }
+        }
+      });
+    }
   }
 
   // ===== RECENT TABLE =====

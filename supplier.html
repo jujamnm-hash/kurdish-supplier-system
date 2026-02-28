@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ku" dir="rtl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>پرۆفایلی دابینکەر | دابینکەر مارکێت</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css"/>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+<div id="navbar-placeholder" data-active=""></div>
+<div class="toast-container" id="toast-container"></div>
+
+<!-- Hero -->
+<div id="supplier-hero" style="background:linear-gradient(135deg,var(--dark2),var(--dark3));border-bottom:1px solid var(--card-border);padding:3rem 0">
+  <div class="container">
+    <div class="d-flex align-items-center gap-4 flex-wrap">
+      <div class="supplier-avatar" id="hero-avatar"
+        style="width:90px;height:90px;font-size:2.5rem;background:var(--gradient);flex-shrink:0"></div>
+      <div style="flex:1">
+        <h1 id="hero-name" style="font-size:1.75rem;font-weight:800;color:var(--text-light);margin-bottom:0.25rem"></h1>
+        <p id="hero-company" style="color:var(--primary-light);font-size:1rem;margin-bottom:0.5rem"></p>
+        <div class="d-flex gap-3 flex-wrap" id="hero-meta"></div>
+      </div>
+      <div id="hero-actions"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Stats bar -->
+<div style="background:var(--card-bg);border-bottom:1px solid var(--card-border)">
+  <div class="container">
+    <div class="d-flex gap-4 py-3 flex-wrap" id="supplier-stats"></div>
+  </div>
+</div>
+
+<!-- Content -->
+<div class="container py-5">
+  <div class="row g-4">
+    <!-- Sidebar -->
+    <div class="col-lg-3">
+      <div class="glass-card p-4 mb-3" id="about-card"></div>
+      <div class="glass-card p-4" id="categories-card"></div>
+    </div>
+
+    <!-- Products Grid -->
+    <div class="col-lg-9">
+      <div class="filter-bar mb-3">
+        <input type="text" class="form-control" id="sup-search" placeholder="گەڕان لە کالاکانی ئەم دابینکەرە..."
+          style="flex:1;min-width:180px" oninput="renderSupplierProducts()"/>
+        <select class="form-select" style="width:auto" id="sup-cat" onchange="renderSupplierProducts()">
+          <option value="all">هەموو پۆلەکان</option>
+        </select>
+        <select class="form-select" style="width:auto" id="sup-sort" onchange="renderSupplierProducts()">
+          <option value="newest">نوێترین</option>
+          <option value="price-low">نرخ: کەمترین</option>
+          <option value="price-high">نرخ: زۆرترین</option>
+          <option value="popular">بەناوبانگترین</option>
+        </select>
+      </div>
+      <div class="row g-4 stagger" id="supplier-products-grid"></div>
+      <div id="sup-pagination"></div>
+    </div>
+  </div>
+</div>
+
+<footer class="footer" style="margin-top:0">
+  <div class="container">
+    <div class="footer-bottom" style="border-top:none;padding-top:0">
+      <p>© ٢٠٢٦ دابینکەر مارکێت</p>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+<script src="js/categories.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/products.js"></script>
+<script src="js/app.js"></script>
+<script>
+  let supplierId = null;
+  let supplierData = null;
+  let supPage = 1;
+  const SUP_PER_PAGE = 12;
+
+  document.addEventListener('DOMContentLoaded', () => {
+    supplierId = new URLSearchParams(location.search).get('id');
+    if (!supplierId) { window.location.href = 'index.html'; return; }
+
+    // Find supplier from users
+    const users = JSON.parse(localStorage.getItem('kss_users') || '[]');
+    supplierData = users.find(u => u.id === supplierId);
+
+    if (!supplierData) {
+      // Try to build from products
+      const prods = Products.getBySupplier(supplierId);
+      if (!prods.length) {
+        document.getElementById('supplier-hero').innerHTML = `
+          <div class="container"><div class="empty-state">
+            <div class="empty-icon">😕</div>
+            <h4>دابینکەرەکە نەدۆزرایەوە</h4>
+            <a href="index.html" class="btn-primary-custom mt-3">← گەڕانەوە</a>
+          </div></div>`;
+        return;
+      }
+      supplierData = {
+        id: supplierId,
+        name: prods[0].supplierName,
+        company: prods[0].supplierCompany,
+        phone: prods[0].supplierPhone,
+        avatar: (prods[0].supplierCompany || prods[0].supplierName || '?').charAt(0)
+      };
+    }
+
+    document.title = `${supplierData.company || supplierData.name} | دابینکەر مارکێت`;
+
+    renderHero();
+    renderStats();
+    renderAbout();
+    populateCatFilter();
+    renderSupplierProducts();
+  });
+
+  function renderHero() {
+    const s = supplierData;
+    document.getElementById('hero-avatar').textContent = s.avatar || s.name.charAt(0);
+    document.getElementById('hero-name').textContent = s.name;
+    document.getElementById('hero-company').textContent = s.company ? `🏢 ${s.company}` : '';
+
+    const meta = [];
+    if (s.city) meta.push(`<span style="color:var(--text-muted);font-size:0.9rem">📍 ${s.city}</span>`);
+    if (s.createdAt) meta.push(`<span style="color:var(--text-muted);font-size:0.9rem">📅 تۆمارکرا: ${formatDate(s.createdAt)}</span>`);
+    document.getElementById('hero-meta').innerHTML = meta.join('');
+
+    const cur = Auth.getCurrentUser();
+    let actions = '';
+    if (s.phone) {
+      actions += `<a href="tel:${s.phone}" class="btn-primary-custom"><i class="bi bi-telephone"></i> ${s.phone}</a>`;
+      actions += `<a href="https://wa.me/${s.phone.replace(/\D/g,'')}" target="_blank" class="btn-accent ms-2" style="border-radius:50px;padding:0.75rem 1.5rem;text-decoration:none">💬 واتساپ</a>`;
+    }
+    if (cur && cur.id === supplierId) {
+      actions += `<a href="dashboard.html" class="btn-outline-custom ms-2">✏️ ویرایستنی پرۆفایل</a>`;
+    }
+    document.getElementById('hero-actions').innerHTML = actions;
+  }
+
+  function renderStats() {
+    const prods = Products.getBySupplier(supplierId);
+    const active = prods.filter(p => p.active).length;
+    const views = prods.reduce((s, p) => s + (p.views || 0), 0);
+    const cats = new Set(prods.map(p => p.category)).size;
+
+    document.getElementById('supplier-stats').innerHTML = `
+      <div><span style="font-size:1.5rem;font-weight:700;color:var(--primary-light)">${prods.length}</span>
+        <span style="color:var(--text-muted);font-size:0.85rem;margin-right:6px">کالا</span></div>
+      <div><span style="font-size:1.5rem;font-weight:700;color:var(--accent)">${active}</span>
+        <span style="color:var(--text-muted);font-size:0.85rem;margin-right:6px">بەردەست</span></div>
+      <div><span style="font-size:1.5rem;font-weight:700;color:#ffd200">${views}</span>
+        <span style="color:var(--text-muted);font-size:0.85rem;margin-right:6px">کۆی بینین</span></div>
+      <div><span style="font-size:1.5rem;font-weight:700;color:var(--secondary)">${cats}</span>
+        <span style="color:var(--text-muted);font-size:0.85rem;margin-right:6px">پۆل</span></div>
+    `;
+  }
+
+  function renderAbout() {
+    const s = supplierData;
+    document.getElementById('about-card').innerHTML = `
+      <h6 style="color:var(--text-light);margin-bottom:1rem;font-weight:700">📋 دەربارە</h6>
+      ${s.description ? `<p style="color:var(--text-muted);font-size:0.9rem;line-height:1.8">${s.description}</p>` : '<p style="color:var(--text-muted);font-size:0.85rem">وەسف نییە</p>'}
+      ${s.city ? `<div style="margin-top:0.75rem"><span class="tag">📍 ${s.city}</span></div>` : ''}
+    `;
+
+    // Categories used
+    const prods = Products.getBySupplier(supplierId);
+    const catCounts = {};
+    prods.forEach(p => { catCounts[p.category] = (catCounts[p.category] || 0) + 1; });
+
+    const catHtml = Object.entries(catCounts).map(([id, count]) => `
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <span style="font-size:0.85rem;color:var(--text-main)">${getCategoryIcon(id)} ${getCategoryName(id)}</span>
+        <span class="badge-custom badge-primary">${count}</span>
+      </div>
+    `).join('');
+
+    document.getElementById('categories-card').innerHTML = `
+      <h6 style="color:var(--text-light);margin-bottom:1rem;font-weight:700">📂 پۆلەکان</h6>
+      ${catHtml || '<p style="color:var(--text-muted);font-size:0.85rem">کالایەک نییە</p>'}
+    `;
+  }
+
+  function populateCatFilter() {
+    const prods = Products.getBySupplier(supplierId);
+    const cats = [...new Set(prods.map(p => p.category))];
+    const opts = cats.map(id => `<option value="${id}">${getCategoryIcon(id)} ${getCategoryName(id)}</option>`).join('');
+    document.getElementById('sup-cat').innerHTML = '<option value="all">هەموو پۆلەکان</option>' + opts;
+  }
+
+  function renderSupplierProducts() {
+    let prods = Products.getBySupplier(supplierId).filter(p => p.active);
+    const search = document.getElementById('sup-search').value.toLowerCase();
+    const cat = document.getElementById('sup-cat').value;
+    const sort = document.getElementById('sup-sort').value;
+
+    if (search) prods = prods.filter(p =>
+      p.name.toLowerCase().includes(search) || p.description.toLowerCase().includes(search)
+    );
+    if (cat !== 'all') prods = prods.filter(p => p.category === cat);
+
+    switch (sort) {
+      case 'price-low': prods.sort((a,b) => a.price - b.price); break;
+      case 'price-high': prods.sort((a,b) => b.price - a.price); break;
+      case 'popular': prods.sort((a,b) => (b.views||0) - (a.views||0)); break;
+      default: prods.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+    }
+
+    const pg = paginate(prods, supPage, SUP_PER_PAGE);
+    const grid = document.getElementById('supplier-products-grid');
+
+    if (!pg.items.length) {
+      grid.innerHTML = `<div class="col-12"><div class="empty-state"><div class="empty-icon">📦</div><h4>کالایەک نەدۆزرایەوە</h4></div></div>`;
+      document.getElementById('sup-pagination').innerHTML = '';
+      return;
+    }
+
+    grid.innerHTML = pg.items.map(p => `<div class="col-sm-6 col-xl-4">${buildProductCard(p)}</div>`).join('');
+    document.getElementById('sup-pagination').innerHTML = buildPagination(pg, 'goSupPage');
+  }
+
+  function goSupPage(page) {
+    supPage = page;
+    renderSupplierProducts();
+    window.scrollTo({ top: 300, behavior: 'smooth' });
+  }
+</script>
+</body>
+</html>

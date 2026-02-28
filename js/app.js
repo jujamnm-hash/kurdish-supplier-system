@@ -64,33 +64,62 @@ function buildProductCard(product, showBadgeNew = false) {
     : `<div class="img-placeholder">${getCategoryIcon(product.category)}</div>`;
 
   const isNew = (Date.now() - new Date(product.createdAt).getTime()) < 3 * 24 * 3600 * 1000;
+  const isFaved = typeof Favorites !== 'undefined' && Favorites.isFav(product.id);
 
   return `
-    <div class="product-card fade-in" onclick="location.href='product.html?id=${product.id}'">
-      <div class="card-image">
+    <div class="product-card fade-in">
+      <div class="card-image" onclick="location.href='product.html?id=${product.id}'" style="cursor:pointer">
         ${img}
         <span class="badge-category">${getCategoryIcon(product.category)} ${getCategoryName(product.category)}</span>
         ${isNew ? '<span class="badge-new">✨ نوێ</span>' : ''}
+        <button class="fav-btn ${isFaved ? 'active' : ''}"
+          onclick="event.stopPropagation();toggleFav('${product.id}',this)"
+          title="${isFaved ? 'لابردن لە پاشەکەوتەکان' : 'زیادکردن بۆ پاشەکەوتەکان'}"
+          style="position:absolute;bottom:10px;left:10px;background:rgba(26,26,46,0.85);border:none;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;z-index:2;font-size:1rem">
+          ${isFaved ? '❤️' : '🤍'}
+        </button>
       </div>
-      <div class="card-body">
+      <div class="card-body" onclick="location.href='product.html?id=${product.id}'" style="cursor:pointer">
         <div class="product-name">${product.name}</div>
         <div class="product-desc">${product.description}</div>
         <div class="product-price">
           ${formatPrice(product.price, product.currency)}
         </div>
         <div class="supplier-info">
-          <div class="supplier-avatar">${(product.supplierCompany || product.supplierName || '?').charAt(0)}</div>
-          <div>
-            <div class="supplier-name">${product.supplierCompany || product.supplierName}</div>
-            <div style="font-size:0.75rem;color:var(--text-muted)">${product.location || ''}</div>
-          </div>
-          <div class="me-auto" style="font-size:0.75rem;color:var(--text-muted);text-align:left">
+          <a href="supplier.html?id=${product.supplierId}" onclick="event.stopPropagation()"
+            style="display:flex;align-items:center;gap:0.5rem;text-decoration:none;flex:1">
+            <div class="supplier-avatar">${(product.supplierCompany || product.supplierName || '?').charAt(0)}</div>
+            <div>
+              <div class="supplier-name">${product.supplierCompany || product.supplierName}</div>
+              <div style="font-size:0.75rem;color:var(--text-muted)">${product.location || ''}</div>
+            </div>
+          </a>
+          <div style="font-size:0.75rem;color:var(--text-muted)">
             👁 ${product.views || 0}
           </div>
         </div>
       </div>
     </div>
   `;
+}
+
+// Toggle favorite
+function toggleFav(productId, btn) {
+  if (typeof Favorites === 'undefined') return;
+  const added = Favorites.toggle(productId);
+  btn.innerHTML = added ? '❤️' : '🤍';
+  btn.classList.toggle('active', added);
+  showToast(added ? '❤️ زیادکرا بۆ پاشەکەوتەکان' : '🤍 لابرا لە پاشەکەوتەکان', added ? 'success' : 'info', 2000);
+  updateFavBadge();
+}
+
+// Update favorites badge in nav
+function updateFavBadge() {
+  const badge = document.getElementById('fav-badge');
+  if (!badge || typeof Favorites === 'undefined') return;
+  const cnt = Favorites.count();
+  badge.textContent = cnt;
+  badge.style.display = cnt > 0 ? 'inline-flex' : 'none';
 }
 
 // Ads marquee builder
@@ -181,6 +210,12 @@ function getNavbarHTML(activePage = '') {
           <li class="nav-item"><a class="nav-link ${activePage==='home'?'active':''}" href="index.html">🏠 سەرەکی</a></li>
           <li class="nav-item"><a class="nav-link ${activePage==='products'?'active':''}" href="index.html#products">📦 کالاکان</a></li>
           <li class="nav-item"><a class="nav-link ${activePage==='categories'?'active':''}" href="index.html#categories">📂 پۆلەکان</a></li>
+          <li class="nav-item">
+            <a class="nav-link ${activePage==='favorites'?'active':''}" href="favorites.html" style="position:relative">
+              ❤️ پاشەکەوتەکان
+              <span id="fav-badge" style="position:absolute;top:4px;right:6px;background:var(--secondary);color:white;border-radius:50%;width:16px;height:16px;font-size:0.65rem;display:none;align-items:center;justify-content:center;font-weight:700"></span>
+            </a>
+          </li>
         </ul>
         <div class="d-flex align-items-center gap-2" id="nav-auth">
           <a href="login.html" class="btn-outline-custom" style="padding:0.5rem 1.25rem;font-size:0.9rem">چوونەژوورەوە</a>
@@ -224,4 +259,7 @@ document.addEventListener('DOMContentLoaded', () => {
     navPlaceholder.outerHTML = getNavbarHTML(active);
     updateNavAuth();
   }
+
+  // Update favorites badge after navbar rendered
+  if (typeof Favorites !== 'undefined') updateFavBadge();
 });

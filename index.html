@@ -129,6 +129,20 @@
         </p>
       </div>
       <div class="d-flex gap-2 align-items-center flex-wrap">
+        <input type="number" id="price-min" placeholder="کەمترین نرخ" min="0"
+          class="form-control" style="width:130px;font-size:0.85rem" oninput="applyFilters()">
+        <span style="color:var(--text-muted)">—</span>
+        <input type="number" id="price-max" placeholder="زۆرترین نرخ" min="0"
+          class="form-control" style="width:130px;font-size:0.85rem" oninput="applyFilters()">
+        <select id="location-filter" class="form-select" style="width:auto;font-size:0.9rem" onchange="applyFilters()">
+          <option value="">📍 هەموو شارەکان</option>
+          <option value="هەولێر">هەولێر</option>
+          <option value="سلێمانی">سلێمانی</option>
+          <option value="دهۆک">دهۆک</option>
+          <option value="کەرکووک">کەرکووک</option>
+          <option value="زاخۆ">زاخۆ</option>
+          <option value="ئەکرێ">ئەکرێ</option>
+        </select>
         <select id="sort-select" class="form-select" style="width:auto;font-size:0.9rem" onchange="applySort()">
           <option value="newest">نوێترین</option>
           <option value="oldest">کۆنترین</option>
@@ -220,6 +234,7 @@
 <script src="js/categories.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/products.js"></script>
+<script src="js/favorites.js"></script>
 <script src="js/app.js"></script>
 <script>
   // State
@@ -227,6 +242,9 @@
   let currentPage = 1;
   let currentSort = 'newest';
   let searchQuery = '';
+  let priceMin = null;
+  let priceMax = null;
+  let locationFilter = '';
   const PER_PAGE = 12;
 
   // Auto-load category from URL
@@ -318,6 +336,15 @@
       items = Products.getByCategory(currentCategory);
     }
 
+    // Price filter
+    if (priceMin !== null) items = items.filter(p => p.price >= priceMin);
+    if (priceMax !== null) items = items.filter(p => p.price <= priceMax);
+
+    // Location filter
+    if (locationFilter) {
+      items = items.filter(p => (p.location || '').includes(locationFilter));
+    }
+
     // Sort
     switch (currentSort) {
       case 'oldest': items = items.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt)); break;
@@ -328,6 +355,16 @@
     }
 
     return items;
+  }
+
+  function applyFilters() {
+    const minVal = document.getElementById('price-min').value;
+    const maxVal = document.getElementById('price-max').value;
+    priceMin = minVal !== '' ? parseFloat(minVal) : null;
+    priceMax = maxVal !== '' ? parseFloat(maxVal) : null;
+    locationFilter = document.getElementById('location-filter').value;
+    currentPage = 1;
+    renderProducts();
   }
 
   function renderProducts() {
