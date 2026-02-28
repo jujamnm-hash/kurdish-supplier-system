@@ -121,6 +121,10 @@
         <li class="nav-item"><a class="nav-link active" href="#" onclick="showSection('overview')"><i class="bi bi-speedometer2"></i> گەڕاندنى گشتی</a></li>
         <li class="nav-item"><a class="nav-link" href="#" onclick="showSection('add-product')"><i class="bi bi-plus-circle"></i> کالای نوێ زیاد بکە</a></li>
         <li class="nav-item"><a class="nav-link" href="#" onclick="showSection('my-products')"><i class="bi bi-grid-3x3-gap"></i> کالاکانم</a></li>
+        <li class="nav-item"><a class="nav-link" href="#" onclick="showSection('messages')" id="sb-messages-link">
+          <i class="bi bi-envelope"></i> پێگەکانم
+          <span id="sb-msg-badge" style="display:none;background:var(--danger);color:white;border-radius:50%;width:18px;height:18px;font-size:0.65rem;display:none;align-items:center;justify-content:center;font-weight:700;margin-right:auto"></span>
+        </a></li>
         <li class="nav-item"><a class="nav-link" href="#" onclick="showSection('profile')"><i class="bi bi-person-circle"></i> پرۆفایلم</a></li>
         <li class="nav-item mt-3">
           <a class="nav-link" href="index.html"><i class="bi bi-shop"></i> بازارگا ببینە</a>
@@ -189,14 +193,23 @@
           </div>
         </div>
         <div class="col-sm-6 col-lg-3">
-          <div class="stat-card">
-            <div class="stat-icon" style="background:rgba(255,101,132,0.15)">📂</div>
+          <div class="stat-card" onclick="showSection('messages')" style="cursor:pointer">
+            <div class="stat-icon" style="background:rgba(255,101,132,0.15)">📩</div>
             <div>
-              <div class="stat-number" id="stat-cats">٠</div>
-              <div class="stat-label">پۆل</div>
+              <div class="stat-number" id="stat-unread-msgs">۰</div>
+              <div class="stat-label">پێڧی نوێ نخویندراو</div>
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- Notifications Panel -->
+      <div class="custom-table mb-4" id="notif-panel" style="display:none">
+        <div style="padding:1rem 1.25rem;border-bottom:1px solid var(--card-border);display:flex;justify-content:space-between;align-items:center">
+          <h6 style="margin:0;color:var(--text-light)">🔔 ئاگادارکردنەوەکان</h6>
+          <button class="filter-btn" onclick="Notifs.markAllRead(currentUser.id);renderNotifPanel()" style="font-size:0.8rem">هەموو بينراوە</button>
+        </div>
+        <div id="notif-list" style="max-height:220px;overflow-y:auto"></div>
       </div>
 
       <!-- Recent Products -->
@@ -432,6 +445,22 @@
       </div>
     </section>
 
+    </section>
+
+    <!-- ===== MESSAGES SECTION ===== -->
+    <section id="sec-messages" style="display:none">
+      <div class="dashboard-header">
+        <div>
+          <h4 style="color:var(--text-light);margin:0">📩 پێگەکانم <span id="msg-count-badge" style="font-size:0.85rem;color:var(--text-muted)"></span></h4>
+          <p style="color:var(--text-muted);margin:0;font-size:0.85rem">پێگەکانی دابینکەران</p>
+        </div>
+        <button class="btn-outline-custom" onclick="Notifs.markAllMessagesRead(currentUser.id);renderMessages()" style="font-size:0.85rem">
+          ✅ هەموو بینراوە
+        </button>
+      </div>
+      <div id="messages-list" class="d-flex flex-column gap-3"></div>
+    </section>
+
   </main>
 </div>
 
@@ -440,6 +469,7 @@
 <script src="js/categories.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/products.js"></script>
+<script src="js/notifications.js"></script>
 <script src="js/app.js"></script>
 <script>
   let currentUser = null;
@@ -461,6 +491,7 @@
     // Render overview
     renderOverviewStats();
     renderRecentTable();
+    refreshBadges();
 
     // Profile form
     fillProfileForm();
@@ -502,9 +533,10 @@
     document.querySelectorAll('.sidebar-nav .nav-link').forEach(l => l.classList.remove('active'));
 
     // Refresh data when switching
-    if (name === 'overview') renderRecentTable();
+    if (name === 'overview') { renderRecentTable(); renderNotifPanel(); }
     if (name === 'my-products') renderMyProducts();
     if (name === 'profile') fillProfileForm();
+    if (name === 'messages') renderMessages();
 
     // Close mobile sidebar
     document.getElementById('sidebar').classList.remove('open');
@@ -523,12 +555,12 @@
     const myProds = Products.getBySupplier(currentUser.id);
     const active = myProds.filter(p => p.active).length;
     const views = myProds.reduce((s, p) => s + (p.views || 0), 0);
-    const cats = new Set(myProds.map(p => p.category)).size;
+    const unreadMsgs = Notifs.unreadMessages(currentUser.id);
 
     document.getElementById('stat-total').textContent = myProds.length;
     document.getElementById('stat-active').textContent = active;
     document.getElementById('stat-views').textContent = views;
-    document.getElementById('stat-cats').textContent = cats;
+    document.getElementById('stat-unread-msgs').textContent = unreadMsgs;
 
     // Category doughnut
     const catCounts = {};
@@ -844,6 +876,76 @@
     fillUserInfo();
     fillProfileForm();
     showToast('✅ پرۆفایلت نوێکرایەوە', 'success');
+  }
+
+  // ===== BADGES =====
+  function refreshBadges() {
+    const msgs = Notifs.unreadMessages(currentUser.id);
+    const badge = document.getElementById('sb-msg-badge');
+    if (badge) {
+      if (msgs > 0) {
+        badge.textContent = msgs;
+        badge.style.display = 'inline-flex';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+    // Update stat card
+    const statEl = document.getElementById('stat-unread-msgs');
+    if (statEl) statEl.textContent = msgs;
+  }
+
+  // ===== NOTIFICATIONS PANEL =====
+  function renderNotifPanel() {
+    const notifs = Notifs.getAll(currentUser.id);
+    const panel = document.getElementById('notif-panel');
+    const list = document.getElementById('notif-list');
+    if (!notifs.length) { panel.style.display = 'none'; return; }
+    panel.style.display = 'block';
+    list.innerHTML = notifs.slice(0, 10).map(n => `
+      <div style="padding:0.75rem 1.25rem;border-bottom:1px solid rgba(108,99,255,0.06);display:flex;align-items:center;gap:0.75rem;background:${n.read ? 'transparent' : 'rgba(108,99,255,0.05)'}">
+        <span style="font-size:1.2rem">${n.type === 'success' ? '✅' : 'ℹ️'}</span>
+        <div style="flex:1;font-size:0.88rem;color:var(--text-main)">${n.msg}</div>
+        <span style="font-size:0.75rem;color:var(--text-muted);white-space:nowrap">${timeAgo(n.time)}</span>
+        <button onclick="Notifs.deleteNotif(currentUser.id,'${n.id}');renderNotifPanel()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.8rem">×</button>
+      </div>`).join('');
+  }
+
+  // ===== MESSAGES =====
+  function renderMessages() {
+    const msgs = Notifs.getMessages(currentUser.id);
+    const list = document.getElementById('messages-list');
+    const badge = document.getElementById('msg-count-badge');
+    badge.textContent = `(${msgs.length} پێڧ)`;
+    Notifs.markAllMessagesRead(currentUser.id);
+    refreshBadges();
+
+    if (!msgs.length) {
+      list.innerHTML = `<div class="empty-state"><div class="empty-icon">📩</div><h4>هێشتا پێڧی نییە</h4><p>کاتێك كەسەک پەیامی بێنێردە بە کالاکانت</p></div>`;
+      return;
+    }
+
+    list.innerHTML = msgs.map(m => {
+      const prod = Products.getById(m.productId);
+      return `
+      <div class="glass-card p-3">
+        <div class="d-flex align-items-start gap-3">
+          <div class="supplier-avatar" style="width:44px;height:44px;font-size:1.1rem;flex-shrink:0;background:var(--gradient)">${m.fromName.charAt(0)}</div>
+          <div style="flex:1">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+              <div>
+                <strong style="color:var(--text-light)">${m.fromName}</strong>
+                ${m.fromPhone ? `<span style="font-size:0.8rem;color:var(--text-muted);margin-right:0.5rem">📞 ${m.fromPhone}</span>` : ''}
+              </div>
+              <span style="font-size:0.8rem;color:var(--text-muted)">${timeAgo(m.time)}</span>
+            </div>
+            ${prod ? `<div style="font-size:0.8rem;color:var(--primary);margin:0.25rem 0">📦 <a href="product.html?id=${prod.id}" style="color:var(--primary)">${prod.name}</a></div>` : ''}
+            <p style="margin:0.5rem 0 0;color:var(--text-main);font-size:0.9rem;line-height:1.7;white-space:pre-line">${m.message}</p>
+          </div>
+          <button onclick="Notifs.deleteMessage(currentUser.id,'${m.id}');renderMessages()" class="btn-outline-custom" style="padding:0.25rem 0.6rem;font-size:0.8rem;color:var(--danger);flex-shrink:0">🗑️</button>
+        </div>
+      </div>`;
+    }).join('');
   }
 </script>
 </body>

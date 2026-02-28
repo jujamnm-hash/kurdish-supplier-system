@@ -169,6 +169,16 @@
   </div>
 </section>
 
+<!-- ===== RECENTLY VIEWED ===== -->
+<section class="py-5" id="recently-viewed-home" style="display:none;border-top:1px solid var(--card-border)">
+  <div class="container">
+    <div class="section-divider"></div>
+    <h2 class="section-title">🕞️ ئەوانەی بێنیتوت</h2>
+    <p class="section-subtitle">کالاکانی کە لێربووتن</p>
+    <div class="row g-4 stagger" id="recently-viewed-home-grid"></div>
+  </div>
+</section>
+
 <!-- ===== JOIN BANNER ===== -->
 <section class="py-5">
   <div class="container">
@@ -235,6 +245,7 @@
 <script src="js/auth.js"></script>
 <script src="js/products.js"></script>
 <script src="js/favorites.js"></script>
+<script src="js/recently.js"></script>
 <script src="js/app.js"></script>
 <script>
   // State
@@ -259,6 +270,7 @@
     renderFilterBar();
     renderProducts();
     buildAdsTickerInit();
+    renderRecentlyViewedHome();
 
     // Search on Enter
     document.getElementById('search-input').addEventListener('keypress', function(e) {
@@ -435,6 +447,18 @@
     if (marquee && products.length) {
       marquee.innerHTML = buildAdsMarquee(products);
     }
+  }
+
+  function renderRecentlyViewedHome() {
+    if (typeof RecentlyViewed === 'undefined') return;
+    const products = RecentlyViewed.getProducts().slice(0, 4);
+    if (!products.length) return;
+    const section = document.getElementById('recently-viewed-home');
+    const grid = document.getElementById('recently-viewed-home-grid');
+    section.style.display = 'block';
+    grid.innerHTML = products.map(p =>
+      `<div class="col-sm-6 col-lg-3">${buildProductCard(p)}</div>`
+    ).join('');
   }
 </script>
 </body>

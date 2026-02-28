@@ -30,6 +30,48 @@
   </div>
 </section>
 
+<!-- Recently Viewed -->
+<section class="py-5" id="recently-viewed-section" style="display:none;border-top:1px solid var(--card-border)">
+  <div class="container">
+    <div class="section-divider"></div>
+    <h3 class="section-title mb-1">🕞️ ئەوانەی بێنیتوت</h3>
+    <p class="section-subtitle">کالاکانی کە دوایین بینیت</p>
+    <div class="row g-4 stagger" id="recently-viewed-grid"></div>
+  </div>
+</section>
+
+<!-- Contact Modal -->
+<div class="modal fade" id="contactModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="background:var(--bg-card);border:1px solid var(--card-border);border-radius:var(--radius)">
+      <div class="modal-header" style="border-bottom:1px solid var(--card-border)">
+        <h5 class="modal-title" style="color:var(--text-light)">📩 پەیام بنێرە</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="contact-form" onsubmit="sendContactMessage(event)">
+          <div class="mb-3">
+            <label class="form-label">ناوت <span style="color:var(--danger)">*</span></label>
+            <input type="text" id="contact-name" class="form-control" placeholder="ناوت بنووسە..." required/>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">ژمارەی مۆبایل</label>
+            <input type="tel" id="contact-phone" class="form-control" placeholder="07x xxxx xxxx"/>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">پەیامەکە <span style="color:var(--danger)">*</span></label>
+            <textarea id="contact-msg" class="form-control" rows="4" placeholder="پەیامەکە کە ناویت..." required></textarea>
+          </div>
+          <div class="d-flex gap-2 justify-content-end">
+            <button type="button" class="btn-outline-custom" data-bs-dismiss="modal">بەتالکردن</button>
+            <button type="submit" class="btn-primary-custom">📤 نێردن</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
 <footer class="footer" style="margin-top:0">
   <div class="container">
     <div class="footer-bottom" style="border-top:none;padding-top:0">
@@ -43,6 +85,8 @@
 <script src="js/auth.js"></script>
 <script src="js/products.js"></script>
 <script src="js/favorites.js"></script>
+<script src="js/recently.js"></script>
+<script src="js/notifications.js"></script>
 <script src="js/app.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', () => {
@@ -64,6 +108,11 @@
 
     // Track view
     Products.incrementViews(id);
+    // Track recently viewed
+    if (typeof RecentlyViewed !== 'undefined') RecentlyViewed.add(id);
+    // Fire view milestone notifications for supplier
+    const refreshed = Products.getById(id);
+    if (typeof Notifs !== 'undefined') Notifs.checkViewMilestones(refreshed);
 
     // Update page title
     document.title = `${product.name} | دابینکەر مارکێت`;
@@ -71,6 +120,7 @@
     // Render product
     renderProduct(product);
     renderRelated(product);
+    renderRecentlyViewed(id);
   });
 
   function renderProduct(p) {
@@ -184,6 +234,9 @@
             <button id="fav-btn-detail" class="btn-outline-custom" onclick="toggleFavDetail('${p.id}', this)">
               ${typeof Favorites !== 'undefined' && Favorites.isFav('${p.id}') ? '❤️ پاشەکەوتکراوە' : '🤍 پاشەکەوتکرن'}
             </button>
+            <button class="btn-outline-custom" data-bs-toggle="modal" data-bs-target="#contactModal">
+              📩 پەیام بنێرە
+            </button>
             ${isOwner ? `
               <a href="dashboard.html" class="btn-outline-custom">
                 ✏️ ویرایستن
@@ -227,6 +280,40 @@
     btn.innerHTML = added ? '❤️ پاشەکەوتکراوە' : '🤍 پاشەکەوتکرن';
     showToast(added ? '❤️ زیادکرا بۆ پاشەکەوتەکان' : '🤍 لە پاشەکەوتەکان سڕایەوە', added ? 'success' : 'info');
     if (typeof updateFavBadge !== 'undefined') updateFavBadge();
+  }
+
+  function renderRecentlyViewed(currentId) {
+    if (typeof RecentlyViewed === 'undefined') return;
+    const products = RecentlyViewed.getProducts().filter(p => p.id !== currentId).slice(0, 4);
+    if (!products.length) return;
+    document.getElementById('recently-viewed-section').style.display = 'block';
+    document.getElementById('recently-viewed-grid').innerHTML = products.map(p =>
+      `<div class="col-sm-6 col-lg-3">${buildProductCard(p)}</div>`
+    ).join('');
+  }
+
+  function sendContactMessage(e) {
+    e.preventDefault();
+    const name = document.getElementById('contact-name').value.trim();
+    const phone = document.getElementById('contact-phone').value.trim();
+    const msg = document.getElementById('contact-msg').value.trim();
+    const productId = new URLSearchParams(location.search).get('id');
+    const product = Products.getById(productId);
+    if (!product) { showToast('هەڵەیەک ڕوویدا', 'error'); return; }
+
+    const ok = Notifs.sendMessage({
+      toSupplierId: product.supplierId,
+      fromName: name, fromPhone: phone, message: msg,
+      productId: product.id, productName: product.name
+    });
+
+    if (ok) {
+      showToast('✅ پەیامەکەت سەرکەوتوانە نێردرا!', 'success');
+      bootstrap.Modal.getInstance(document.getElementById('contactModal')).hide();
+      document.getElementById('contact-form').reset();
+    } else {
+      showToast('هەڵەیەک ڕوویدا', 'error');
+    }
   }
 </script>
 </body>
