@@ -134,6 +134,9 @@ const DB = (() => {
       } else {
         showSyncBadge('✓ sync', 'ok');
       }
+
+      // Notify all listeners that cloud data is ready
+      window.dispatchEvent(new CustomEvent('kss:synced'));
     } catch (err) {
       console.warn('DB.init error:', err.message || err);
       showSyncBadge('⚠ offline', 'warn');

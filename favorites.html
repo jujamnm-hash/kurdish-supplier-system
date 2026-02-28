@@ -108,6 +108,8 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       renderFavs();
+      // Re-render if cloud sync brings new product data
+      window.addEventListener('kss:synced', () => renderFavs());
     });
   </script>
 </body>

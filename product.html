@@ -158,30 +158,51 @@
       return;
     }
 
-    const product = Products.getById(id);
-    if (!product) {
-      document.getElementById('product-container').innerHTML = `
-        <div class="empty-state"><div class="empty-icon">😕</div><h4>ئەم کالایە بەردەست نییە</h4>
-        <a href="index.html" class="btn-primary-custom mt-3">← گەڕانەوە</a></div>`;
-      return;
+    function initProduct() {
+      const product = Products.getById(id);
+      if (!product) {
+        document.getElementById('product-container').innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">⏳</div>
+            <h4>چاوەڕوانی بارکردنی دیتا...</h4>
+            <p style="color:var(--text-muted);font-size:0.9rem">کالاکە لە کلاود بارەکەیدا دەبێت</p>
+          </div>`;
+        // Wait for cloud sync then retry once
+        window.addEventListener('kss:synced', () => {
+          const p2 = Products.getById(id);
+          if (p2) {
+            showProduct(p2);
+          } else {
+            document.getElementById('product-container').innerHTML = `
+              <div class="empty-state"><div class="empty-icon">😕</div><h4>ئەم کالایە بەردەست نییە</h4>
+              <a href="index.html" class="btn-primary-custom mt-3">← گەڕانەوە</a></div>`;
+          }
+        }, { once: true });
+        return;
+      }
+      showProduct(product);
     }
 
-    // Track view
-    Products.incrementViews(id);
-    // Track recently viewed
-    if (typeof RecentlyViewed !== 'undefined') RecentlyViewed.add(id);
-    // Fire view milestone notifications for supplier
-    const refreshed = Products.getById(id);
-    if (typeof Notifs !== 'undefined') Notifs.checkViewMilestones(refreshed);
+    function showProduct(product) {
+      // Track view
+      Products.incrementViews(id);
+      // Track recently viewed
+      if (typeof RecentlyViewed !== 'undefined') RecentlyViewed.add(id);
+      // Fire view milestone notifications for supplier
+      const refreshed = Products.getById(id);
+      if (typeof Notifs !== 'undefined') Notifs.checkViewMilestones(refreshed);
 
-    // Update page title
-    document.title = `${product.name} | دابینکەر مارکێت`;
+      // Update page title
+      document.title = `${product.name} | دابینکەر مارکێت`;
 
-    // Render product
-    renderProduct(product);
-    renderRelated(product);
-    renderRecentlyViewed(id);
-    renderReviews(id);
+      // Render product
+      renderProduct(product);
+      renderRelated(product);
+      renderRecentlyViewed(id);
+      renderReviews(id);
+    }
+
+    initProduct();
   });
 
   function renderProduct(p) {

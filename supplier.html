@@ -89,16 +89,34 @@
   let supPage = 1;
   const SUP_PER_PAGE = 12;
 
-  document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('DOMContentLoaded', async () => {
     supplierId = new URLSearchParams(location.search).get('id');
     if (!supplierId) { window.location.href = 'index.html'; return; }
 
-    // Find supplier from users
+    // 1. Try localStorage users first (fast, offline)
     const users = JSON.parse(localStorage.getItem('kss_users') || '[]');
     supplierData = users.find(u => u.id === supplierId);
 
+    // 2. If not found locally, try Supabase profiles (Supabase-registered suppliers)
+    if (!supplierData && typeof DB !== 'undefined' && DB.isConfigured()) {
+      const profile = await DB.getProfile(supplierId);
+      if (profile) {
+        supplierData = {
+          id: profile.id,
+          name: profile.name,
+          company: profile.company || '',
+          phone: profile.phone || '',
+          city: profile.city || '',
+          description: profile.description || '',
+          avatar: (profile.company || profile.name || '?').charAt(0),
+          createdAt: profile.created_at,
+          verified: profile.verified || false
+        };
+      }
+    }
+
     if (!supplierData) {
-      // Try to build from products
+      // 3. Build minimal profile from products as last resort
       const prods = Products.getBySupplier(supplierId);
       if (!prods.length) {
         document.getElementById('supplier-hero').innerHTML = `
@@ -125,6 +143,12 @@
     renderAbout();
     populateCatFilter();
     renderSupplierProducts();
+
+    // Re-render products after cloud sync
+    window.addEventListener('kss:synced', () => {
+      renderStats();
+      renderSupplierProducts();
+    });
   });
 
   function renderHero() {

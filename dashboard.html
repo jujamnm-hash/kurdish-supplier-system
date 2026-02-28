@@ -158,9 +158,15 @@
           <h4 style="color:var(--text-light);margin:0">گەڕاندنی گشتی 📊</h4>
           <p style="color:var(--text-muted);margin:0;font-size:0.85rem">بەخێربێیت دەرگێ، <span id="welcome-name"></span>!</p>
         </div>
-        <button class="btn-primary-custom" onclick="showSection('add-product')">
-          <i class="bi bi-plus-circle"></i> کالای نوێ
-        </button>
+        <div class="d-flex align-items-center gap-2">
+          <span id="sync-status" style="display:none"></span>
+          <button class="btn-outline-custom" onclick="DB.syncNow().then(()=>{renderOverviewStats();renderRecentTable()})" title="نوێکردنەوەی هەموو دیتاکان لە کلاود" style="padding:0.4rem 0.9rem;font-size:0.82rem">
+            <i class="bi bi-cloud-arrow-down"></i> سینکی کلاود
+          </button>
+          <button class="btn-primary-custom" onclick="showSection('add-product')">
+            <i class="bi bi-plus-circle"></i> کالای نوێ
+          </button>
+        </div>
       </div>
 
       <!-- Stats -->
@@ -506,6 +512,12 @@
     });
 
     document.getElementById('product-form').addEventListener('submit', submitProduct);
+
+    // Re-render stats when cloud sync finishes
+    window.addEventListener('kss:synced', () => {
+      renderOverviewStats();
+      renderRecentTable();
+    });
   });
 
   function populateCategorySelects() {

@@ -315,6 +315,14 @@
     if (urlParams.get('cat')) {
       setTimeout(() => document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' }), 500);
     }
+
+    // Re-render all after cloud sync finishes
+    window.addEventListener('kss:synced', () => {
+      renderStats();
+      renderCategories();
+      renderFeatured();
+      renderProducts();
+    });
   });
 
   function renderStats() {
