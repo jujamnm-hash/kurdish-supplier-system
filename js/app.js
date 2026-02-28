@@ -280,7 +280,15 @@ function initScrollAnimations() {
 }
 
 // Initialize
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  // 1. Sync from Supabase cloud → localStorage cache
+  if (typeof DB !== 'undefined') {
+    await DB.init();
+    // Check Supabase auth session validity in background
+    if (typeof Auth !== 'undefined') Auth.initAuth();
+  }
+
+  // 2. Seed demo data only if cache is still empty after cloud sync
   Products.seedIfEmpty();
   updateNavAuth();
   initScrollAnimations();
