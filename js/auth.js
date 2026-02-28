@@ -164,9 +164,27 @@ const Auth = (() => {
   /**
    * initAuth() — Call on page load to silently verify Supabase session.
    * Clears localStorage session if the Supabase session has expired.
+   * Also detects stale pre-Supabase sessions (id: sup_XXX) and forces re-login.
    */
   async function initAuth() {
     if (!DB.isConfigured()) return;
+
+    // Detect old localStorage-only session (id starts with 'sup_')
+    const session = getCurrentUser();
+    if (session && typeof session.id === 'string' && session.id.startsWith('sup_')) {
+      // Old account — must re-register/login via Supabase
+      localStorage.removeItem('kss_session');
+      const isProtected = ['dashboard.html'].some(p => location.pathname.includes(p));
+      if (typeof showToast === 'function') {
+        showToast('پێویستە دوبارە دەبێت دەربکەوی کهوتن — سیستەمەکە نوێبوویەوە کرا', 'warning', 5000);
+      }
+      if (isProtected) {
+        setTimeout(() => window.location.href = 'login.html', 2000);
+      }
+      if (typeof updateNavAuth === 'function') updateNavAuth();
+      return;
+    }
+
     try {
       const { data } = await _supabase.auth.getSession();
       if (!data.session && getCurrentUser()) {

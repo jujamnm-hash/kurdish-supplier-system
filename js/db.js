@@ -150,6 +150,11 @@ const DB = (() => {
   async function pushProduct(product) {
     if (!isConfigured()) return;
     if (!product.supplierId || product.supplierId === 'demo') return;
+    // Old pre-Supabase ids (sup_XXX) cannot be synced
+    if (product.supplierId.startsWith('sup_')) {
+      console.warn('DB.pushProduct: legacy supplierId, skipping sync');
+      return;
+    }
 
     try {
       const row = productToRow(product);
@@ -157,6 +162,10 @@ const DB = (() => {
       if (error) throw error;
     } catch (err) {
       console.warn('DB.pushProduct error:', err.message || err);
+      // Show visible warning so user knows cloud save failed
+      if (typeof showToast === 'function') {
+        showToast('⚠ کالاکە لە دەستگای خۆی پاشەکەوتدا بەلام ئەوین نادەرایەوە بیت', 'warning', 4000);
+      }
     }
   }
 
