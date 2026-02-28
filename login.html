@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ku" dir="rtl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>چوونەژوورەوە | دابینکەر مارکێت</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css"/>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+<div class="toast-container" id="toast-container"></div>
+
+<!-- Animated Background -->
+<div style="position:fixed;inset:0;background:linear-gradient(135deg,var(--dark) 0%,var(--dark2) 100%);z-index:-1"></div>
+<div style="position:fixed;width:500px;height:500px;background:radial-gradient(circle,rgba(108,99,255,0.12) 0%,transparent 70%);top:-100px;right:-100px;border-radius:50%;z-index:-1;animation:pulse 6s ease infinite"></div>
+<div style="position:fixed;width:400px;height:400px;background:radial-gradient(circle,rgba(67,233,123,0.08) 0%,transparent 70%);bottom:-100px;left:-100px;border-radius:50%;z-index:-1;animation:pulse 8s ease infinite reverse"></div>
+
+<div class="auth-page">
+  <div class="container">
+    <div class="row justify-content-center">
+      <div class="col-md-8 col-lg-5">
+        
+        <div class="auth-card fade-in">
+          <!-- Logo -->
+          <div class="auth-logo">
+            <a href="index.html" style="text-decoration:none">
+              <h2>✦ دابینکەر مارکێت</h2>
+            </a>
+            <p style="color:var(--text-muted);font-size:0.9rem;margin-top:0.5rem">
+              بەخێربێیت دەرگێ! 👋
+            </p>
+          </div>
+
+          <form id="login-form" novalidate>
+            <!-- Email -->
+            <div class="mb-3">
+              <label class="form-label">
+                <i class="bi bi-envelope me-1"></i> ئیمەیڵ
+              </label>
+              <input type="email" id="email" class="form-control" placeholder="email@example.com" required/>
+              <div class="invalid-feedback">ئیمەیڵی دروست بنووسە</div>
+            </div>
+
+            <!-- Password -->
+            <div class="mb-4">
+              <label class="form-label">
+                <i class="bi bi-lock me-1"></i> پاسوەرد
+              </label>
+              <div style="position:relative">
+                <input type="password" id="password" class="form-control" placeholder="پاسوەردت بنووسە" required/>
+                <button type="button" class="btn p-0" onclick="togglePass('password')"
+                  style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-muted);background:none;border:none">
+                  <i class="bi bi-eye-slash" id="eye-icon"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Submit -->
+            <button type="submit" class="btn-primary-custom w-100 justify-content-center py-3" id="login-btn">
+              <i class="bi bi-box-arrow-in-right"></i> چوونەژوورەوە
+            </button>
+
+            <div class="text-center mt-4">
+              <p style="color:var(--text-muted);font-size:0.9rem">
+                ئەکاونتت نییە؟ 
+                <a href="register.html" style="color:var(--primary-light);text-decoration:none;font-weight:600">
+                  تۆمارکردن
+                </a>
+              </p>
+              <a href="index.html" style="color:var(--text-muted);font-size:0.85rem;text-decoration:none">
+                ← گەڕانەوە بۆ سەرەکی
+              </a>
+            </div>
+          </form>
+
+          <!-- Demo Account Info -->
+          <div class="mt-4 p-3" style="background:rgba(108,99,255,0.08);border:1px solid rgba(108,99,255,0.2);border-radius:var(--radius-sm)">
+            <p style="color:var(--text-muted);font-size:0.8rem;margin:0;text-align:center">
+              <i class="bi bi-info-circle me-1"></i>
+              ئەکاونتت نییە؟  
+              <a href="register.html" style="color:var(--primary-light)">ئێستا بیدروست بکە</a> — 
+              خۆڕایییە!
+            </p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+<script src="js/categories.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/products.js"></script>
+<script src="js/app.js"></script>
+<script>
+  // Redirect if already logged in
+  document.addEventListener('DOMContentLoaded', () => {
+    Auth.requireGuest('dashboard.html');
+  });
+
+  function togglePass(id) {
+    const input = document.getElementById(id);
+    const icon = document.getElementById('eye-icon');
+    if (input.type === 'password') {
+      input.type = 'text';
+      icon.className = 'bi bi-eye';
+    } else {
+      input.type = 'password';
+      icon.className = 'bi bi-eye-slash';
+    }
+  }
+
+  document.getElementById('login-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    
+    if (!email || !password) {
+      showToast('تکایە هەموو خانەکان پڕ بکەرەوە', 'warning');
+      return;
+    }
+
+    const btn = document.getElementById('login-btn');
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>چاوەڕوان بە...';
+    btn.disabled = true;
+
+    setTimeout(() => {
+      const result = Auth.login(email, password);
+      if (result.success) {
+        showToast(`بەخێربێیت، ${result.user.name}! 🎉`, 'success');
+        setTimeout(() => window.location.href = 'dashboard.html', 1000);
+      } else {
+        showToast(result.msg, 'error');
+        btn.innerHTML = '<i class="bi bi-box-arrow-in-right"></i> چوونەژوورەوە';
+        btn.disabled = false;
+      }
+    }, 600);
+  });
+</script>
+</body>
+</html>

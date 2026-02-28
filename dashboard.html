@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="ku" dir="rtl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>داشبۆرد | دابینکەر مارکێت</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css"/>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+
+<div class="toast-container" id="toast-container"></div>
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<!-- EDIT MODAL -->
+<div class="modal fade" id="editModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" style="color:var(--text-light)">✏️ ویرایستنی کالا</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="edit-form">
+          <input type="hidden" id="edit-id"/>
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label">ناوی کالا <span style="color:var(--danger)">*</span></label>
+              <input type="text" id="edit-name" class="form-control" required/>
+            </div>
+            <div class="col-12">
+              <label class="form-label">وەسف</label>
+              <textarea id="edit-desc" class="form-control" rows="3"></textarea>
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label">نرخ <span style="color:var(--danger)">*</span></label>
+              <input type="number" id="edit-price" class="form-control" min="0"/>
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label">دراو</label>
+              <select id="edit-currency" class="form-select">
+                <option>دینار</option><option>دۆلار</option><option>تومان</option><option>لیرە</option>
+              </select>
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label">پۆل</label>
+              <select id="edit-category" class="form-select">
+                <option value="auto">⚡ خۆکار</option>
+                <!-- filled by JS -->
+              </select>
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label">ستۆک</label>
+              <input type="number" id="edit-stock" class="form-control" min="0"/>
+            </div>
+            <div class="col-12">
+              <label class="form-label">پەیوەندی وێنەکە (URL)</label>
+              <input type="url" id="edit-image" class="form-control" placeholder="https://..."/>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-outline-custom" data-bs-dismiss="modal" style="padding:0.5rem 1.5rem">بەتالکردن</button>
+        <button class="btn-primary-custom" onclick="saveEdit()" style="padding:0.5rem 1.5rem">
+          <i class="bi bi-check-lg"></i> پاشەکەوت
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE MODAL -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" style="color:var(--danger)">🗑️ سڕینەوە</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p style="color:var(--text-muted)">دڵنیایت کالاکە بسڕیتەوە؟ ئەم کارە گەڕانەوەی نییە.</p>
+        <input type="hidden" id="delete-id"/>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-outline-custom" data-bs-dismiss="modal" style="padding:0.5rem 1.25rem">نەخێر</button>
+        <button class="btn-primary-custom" style="background:var(--danger);padding:0.5rem 1.25rem" onclick="confirmDelete()">
+          <i class="bi bi-trash"></i> سڕینەوە
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="dashboard-layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <a href="index.html" style="text-decoration:none">
+        <h3>✦ دابینکەر مارکێت</h3>
+      </a>
+      <div style="margin-top:1rem;display:flex;align-items:center;gap:0.75rem">
+        <div class="supplier-avatar" id="sb-avatar" style="width:40px;height:40px;font-size:1.1rem;flex-shrink:0"></div>
+        <div>
+          <div id="sb-name" style="font-size:0.9rem;font-weight:600;color:var(--text-light)"></div>
+          <div id="sb-company" style="font-size:0.8rem;color:var(--text-muted)"></div>
+        </div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <ul class="nav flex-column">
+        <li class="nav-item"><a class="nav-link active" href="#" onclick="showSection('overview')"><i class="bi bi-speedometer2"></i> گەڕاندنى گشتی</a></li>
+        <li class="nav-item"><a class="nav-link" href="#" onclick="showSection('add-product')"><i class="bi bi-plus-circle"></i> کالای نوێ زیاد بکە</a></li>
+        <li class="nav-item"><a class="nav-link" href="#" onclick="showSection('my-products')"><i class="bi bi-grid-3x3-gap"></i> کالاکانم</a></li>
+        <li class="nav-item"><a class="nav-link" href="#" onclick="showSection('profile')"><i class="bi bi-person-circle"></i> پرۆفایلم</a></li>
+        <li class="nav-item mt-3">
+          <a class="nav-link" href="index.html"><i class="bi bi-shop"></i> بازارگا ببینە</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="#" onclick="Auth.logout()" style="color:var(--danger)!important">
+            <i class="bi bi-box-arrow-right"></i> دەرچوون
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="dashboard-main">
+    <!-- Mobile header -->
+    <div class="d-lg-none mb-3 d-flex align-items-center justify-content-between">
+      <button class="btn-outline-custom" onclick="toggleSidebar()" style="padding:0.5rem 1rem">
+        <i class="bi bi-list"></i>
+      </button>
+      <span style="font-weight:700;color:var(--text-light)">داشبۆرد</span>
+      <a href="index.html" class="btn-outline-custom" style="padding:0.5rem 1rem">
+        <i class="bi bi-house"></i>
+      </a>
+    </div>
+
+    <!-- ===== OVERVIEW SECTION ===== -->
+    <section id="sec-overview">
+      <div class="dashboard-header">
+        <div>
+          <h4 style="color:var(--text-light);margin:0">گەڕاندنی گشتی 📊</h4>
+          <p style="color:var(--text-muted);margin:0;font-size:0.85rem">بەخێربێیت دەرگێ، <span id="welcome-name"></span>!</p>
+        </div>
+        <button class="btn-primary-custom" onclick="showSection('add-product')">
+          <i class="bi bi-plus-circle"></i> کالای نوێ
+        </button>
+      </div>
+
+      <!-- Stats -->
+      <div class="row g-3 mb-4 stagger">
+        <div class="col-sm-6 col-lg-3">
+          <div class="stat-card">
+            <div class="stat-icon" style="background:rgba(108,99,255,0.15)">📦</div>
+            <div>
+              <div class="stat-number" id="stat-total">٠</div>
+              <div class="stat-label">کالای تۆمارکراو</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+          <div class="stat-card">
+            <div class="stat-icon" style="background:rgba(67,233,123,0.15)">✅</div>
+            <div>
+              <div class="stat-number" id="stat-active">٠</div>
+              <div class="stat-label">بەردەست</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+          <div class="stat-card">
+            <div class="stat-icon" style="background:rgba(247,151,30,0.15)">👁</div>
+            <div>
+              <div class="stat-number" id="stat-views">٠</div>
+              <div class="stat-label">کۆی بینین</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+          <div class="stat-card">
+            <div class="stat-icon" style="background:rgba(255,101,132,0.15)">📂</div>
+            <div>
+              <div class="stat-number" id="stat-cats">٠</div>
+              <div class="stat-label">پۆل</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Products -->
+      <div class="custom-table">
+        <div style="padding:1.25rem;border-bottom:1px solid var(--card-border);display:flex;justify-content:space-between;align-items:center">
+          <h6 style="margin:0;color:var(--text-light)">📦 کالاکانی دوایین</h6>
+          <button class="filter-btn" onclick="showSection('my-products')">هەموو ببینە</button>
+        </div>
+        <div id="recent-products-table">
+          <div class="empty-state"><div class="empty-icon">📦</div><h4>هێشتا کالایەک نییە</h4></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== ADD PRODUCT SECTION ===== -->
+    <section id="sec-add-product" style="display:none">
+      <div class="dashboard-header">
+        <div>
+          <h4 style="color:var(--text-light);margin:0">➕ کالای نوێ زیاد بکە</h4>
+          <p style="color:var(--text-muted);margin:0;font-size:0.85rem">زانیاری کالاکەت داخڵ بکە — پۆلبندی خۆکارانە دەبێت</p>
+        </div>
+      </div>
+
+      <div class="glass-card p-4">
+        <form id="product-form" novalidate>
+          <div class="row g-4">
+            <!-- Left Column -->
+            <div class="col-lg-8">
+              <!-- Name -->
+              <div class="mb-3">
+                <label class="form-label">
+                  ناوی کالا <span style="color:var(--danger)">*</span>
+                  <small style="color:var(--text-muted);font-weight:400;margin-right:8px">
+                    — پۆلبندی خۆکار بەپێی ناو و وەسف
+                  </small>
+                </label>
+                <input type="text" id="p-name" class="form-control" placeholder="ناوی کالاکەت بنووسە..." required
+                  oninput="previewCategoryDetect()"/>
+                <div id="auto-cat-preview" style="margin-top:8px;display:none">
+                  <span style="font-size:0.8rem;color:var(--text-muted)">پۆلی دیاریکراو: </span>
+                  <span id="auto-cat-badge" class="badge-custom badge-primary"></span>
+                </div>
+              </div>
+
+              <!-- Description -->
+              <div class="mb-3">
+                <label class="form-label">وەسفی کالا <span style="color:var(--danger)">*</span></label>
+                <textarea id="p-desc" class="form-control" rows="4"
+                  placeholder="وەسفی تەواوی کالاکەت بنووسە — جنس، قەبارە، رەنگ، تایبەتمەندەکان..."
+                  required oninput="previewCategoryDetect()"></textarea>
+                <div id="char-count" style="font-size:0.75rem;color:var(--text-muted);text-align:left;margin-top:4px">٠ پیت</div>
+              </div>
+
+              <!-- Image URL -->
+              <div class="mb-3">
+                <label class="form-label">پەیوەندی وێنەکە (URL)</label>
+                <input type="url" id="p-image" class="form-control"
+                  placeholder="https://example.com/image.jpg"
+                  oninput="previewImage()"/>
+                <div id="img-preview" style="display:none;margin-top:0.75rem">
+                  <img id="img-preview-el" src="" alt="preview"
+                    style="max-height:200px;border-radius:var(--radius-sm);border:1px solid var(--card-border)"/>
+                </div>
+              </div>
+
+              <!-- Tags -->
+              <div class="mb-3">
+                <label class="form-label">تاگەکان <small style="color:var(--text-muted)">(بە کاما جیا بکەرەوە)</small></label>
+                <input type="text" id="p-tags" class="form-control" placeholder="مۆبایل، ئەپڵ، نوێ..."/>
+              </div>
+            </div>
+
+            <!-- Right Column -->
+            <div class="col-lg-4">
+              <!-- Price -->
+              <div class="mb-3">
+                <label class="form-label">نرخ <span style="color:var(--danger)">*</span></label>
+                <input type="number" id="p-price" class="form-control" placeholder="٠" min="0" required/>
+              </div>
+
+              <!-- Currency -->
+              <div class="mb-3">
+                <label class="form-label">دراو</label>
+                <select id="p-currency" class="form-select">
+                  <option value="دینار">🇮🇶 دینار</option>
+                  <option value="دۆلار">🇺🇸 دۆلار</option>
+                  <option value="تومان">🇮🇷 تومان</option>
+                  <option value="لیرە">🇹🇷 لیرە</option>
+                </select>
+              </div>
+
+              <!-- Category -->
+              <div class="mb-3">
+                <label class="form-label">پۆل</label>
+                <select id="p-category" class="form-select" onchange="previewCategoryDetect()">
+                  <option value="auto">⚡ خۆکار (پێشنیارکراو)</option>
+                  <!-- filled by JS -->
+                </select>
+                <small style="color:var(--text-muted);font-size:0.8rem">
+                  ⚡ "خۆکار" هەڵبژێرە — سیستەمەکە خۆی پۆلبندی دەکات
+                </small>
+              </div>
+
+              <!-- Stock -->
+              <div class="mb-3">
+                <label class="form-label">ژماری ستۆک</label>
+                <input type="number" id="p-stock" class="form-control" placeholder="٠" min="0" value="1"/>
+              </div>
+
+              <!-- Location -->
+              <div class="mb-3">
+                <label class="form-label">شوێن/شار</label>
+                <input type="text" id="p-location" class="form-control" placeholder="هەولێر، سلێمانی..."/>
+              </div>
+
+              <!-- Submit -->
+              <button type="submit" class="btn-accent w-100 py-3 mt-2" id="submit-btn" style="border-radius:var(--radius-sm);font-size:1rem">
+                🚀 کالاکەم تۆمار بکە
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- ===== MY PRODUCTS SECTION ===== -->
+    <section id="sec-my-products" style="display:none">
+      <div class="dashboard-header">
+        <div>
+          <h4 style="color:var(--text-light);margin:0">📦 کالاکانم</h4>
+          <p style="color:var(--text-muted);margin:0;font-size:0.85rem" id="my-products-count"></p>
+        </div>
+        <button class="btn-primary-custom" onclick="showSection('add-product')">
+          <i class="bi bi-plus-circle"></i> کالای نوێ
+        </button>
+      </div>
+
+      <!-- Search & Filter -->
+      <div class="filter-bar mb-3">
+        <input type="text" class="form-control" placeholder="گەڕان لە کالاکانم..." id="my-search"
+          style="width:250px" oninput="renderMyProducts()"/>
+        <select class="form-select" style="width:auto" id="my-cat-filter" onchange="renderMyProducts()">
+          <option value="all">هەموو پۆلەکان</option>
+          <!-- filled by JS -->
+        </select>
+      </div>
+
+      <div class="custom-table">
+        <table>
+          <thead>
+            <tr>
+              <th>کالا</th>
+              <th>پۆل</th>
+              <th>نرخ</th>
+              <th>ستۆک</th>
+              <th>بینین</th>
+              <th>دۆخ</th>
+              <th>کردارەکان</th>
+            </tr>
+          </thead>
+          <tbody id="my-products-tbody">
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ===== PROFILE SECTION ===== -->
+    <section id="sec-profile" style="display:none">
+      <div class="dashboard-header">
+        <div>
+          <h4 style="color:var(--text-light);margin:0">👤 پرۆفایلم</h4>
+          <p style="color:var(--text-muted);margin:0;font-size:0.85rem">زانیاریەکانت بگۆڕە</p>
+        </div>
+      </div>
+
+      <div class="glass-card p-4" style="max-width:600px">
+        <div class="text-center mb-4">
+          <div class="supplier-avatar mx-auto" id="profile-avatar"
+            style="width:80px;height:80px;font-size:2rem;background:var(--gradient)"></div>
+          <h5 id="profile-name" style="color:var(--text-light);margin-top:1rem"></h5>
+          <p id="profile-company" style="color:var(--text-muted);font-size:0.9rem"></p>
+        </div>
+
+        <form id="profile-form">
+          <div class="row g-3">
+            <div class="col-sm-6">
+              <label class="form-label">ناو</label>
+              <input type="text" id="prof-name" class="form-control"/>
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label">ژمارەی مۆبایل</label>
+              <input type="tel" id="prof-phone" class="form-control"/>
+            </div>
+            <div class="col-12">
+              <label class="form-label">ناوی کۆمپانیا</label>
+              <input type="text" id="prof-company" class="form-control"/>
+            </div>
+            <div class="col-12">
+              <label class="form-label">وەسفی کۆمپانیا</label>
+              <textarea id="prof-desc" class="form-control" rows="3"></textarea>
+            </div>
+            <div class="col-12">
+              <button type="submit" class="btn-primary-custom">
+                <i class="bi bi-check-lg"></i> پاشەکەوت
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+<script src="js/categories.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/products.js"></script>
+<script src="js/app.js"></script>
+<script>
+  let currentUser = null;
+  let editModal, deleteModal;
+
+  document.addEventListener('DOMContentLoaded', () => {
+    if (!Auth.requireAuth('login.html')) return;
+    currentUser = Auth.getCurrentUser();
+
+    editModal = new bootstrap.Modal(document.getElementById('editModal'));
+    deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+
+    // Populate category selects
+    populateCategorySelects();
+
+    // Fill user info
+    fillUserInfo();
+
+    // Render overview
+    renderOverviewStats();
+    renderRecentTable();
+
+    // Profile form
+    fillProfileForm();
+    document.getElementById('profile-form').addEventListener('submit', saveProfile);
+
+    // Product form
+    document.getElementById('p-desc').addEventListener('input', function() {
+      document.getElementById('char-count').textContent = this.value.length + ' پیت';
+    });
+
+    document.getElementById('product-form').addEventListener('submit', submitProduct);
+  });
+
+  function populateCategorySelects() {
+    const catOpts = CATEGORIES.map(c => `<option value="${c.id}">${c.icon} ${c.name}</option>`).join('');
+    document.getElementById('p-category').innerHTML =
+      '<option value="auto">⚡ خۆکار (پێشنیارکراو)</option>' + catOpts;
+    document.getElementById('edit-category').innerHTML =
+      '<option value="auto">⚡ خۆکار</option>' + catOpts;
+    
+    // My products filter
+    document.getElementById('my-cat-filter').innerHTML =
+      '<option value="all">هەموو پۆلەکان</option>' + catOpts;
+  }
+
+  function fillUserInfo() {
+    document.getElementById('welcome-name').textContent = currentUser.name;
+    document.getElementById('sb-avatar').textContent = currentUser.avatar || currentUser.name.charAt(0);
+    document.getElementById('sb-name').textContent = currentUser.name;
+    document.getElementById('sb-company').textContent = currentUser.company || '';
+  }
+
+  function showSection(name) {
+    // Hide all sections
+    document.querySelectorAll('[id^="sec-"]').forEach(s => s.style.display = 'none');
+    document.getElementById(`sec-${name}`).style.display = 'block';
+
+    // Update sidebar active link
+    document.querySelectorAll('.sidebar-nav .nav-link').forEach(l => l.classList.remove('active'));
+
+    // Refresh data when switching
+    if (name === 'overview') renderRecentTable();
+    if (name === 'my-products') renderMyProducts();
+    if (name === 'profile') fillProfileForm();
+
+    // Close mobile sidebar
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebar-overlay').classList.remove('show');
+  }
+
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('sidebar-overlay').classList.toggle('show');
+  }
+
+  // ===== STATS =====
+  function renderOverviewStats() {
+    const myProds = Products.getBySupplier(currentUser.id);
+    const active = myProds.filter(p => p.active).length;
+    const views = myProds.reduce((s, p) => s + (p.views || 0), 0);
+    const cats = new Set(myProds.map(p => p.category)).size;
+
+    document.getElementById('stat-total').textContent = myProds.length;
+    document.getElementById('stat-active').textContent = active;
+    document.getElementById('stat-views').textContent = views;
+    document.getElementById('stat-cats').textContent = cats;
+  }
+
+  // ===== RECENT TABLE =====
+  function renderRecentTable() {
+    const myProds = Products.getBySupplier(currentUser.id).slice(0, 5);
+    const tbody = document.getElementById('recent-products-table');
+    if (!myProds.length) {
+      tbody.innerHTML = `<div class="empty-state"><div class="empty-icon">📦</div><h4>هێشتا کالایەک نییە</h4><p>کالای یەکەمت زیاد بکە</p></div>`;
+      return;
+    }
+    tbody.innerHTML = `<table style="width:100%;border-collapse:collapse">
+      <thead><tr>
+        <th style="padding:1rem;color:var(--text-muted);font-size:0.85rem;border-bottom:1px solid var(--card-border);text-align:right">کالا</th>
+        <th style="padding:1rem;color:var(--text-muted);font-size:0.85rem;border-bottom:1px solid var(--card-border);text-align:right">پۆل</th>
+        <th style="padding:1rem;color:var(--text-muted);font-size:0.85rem;border-bottom:1px solid var(--card-border);text-align:right">نرخ</th>
+        <th style="padding:1rem;color:var(--text-muted);font-size:0.85rem;border-bottom:1px solid var(--card-border);text-align:right">بینین</th>
+      </tr></thead>
+      <tbody>${myProds.map(p => `
+        <tr onclick="location.href='product.html?id=${p.id}'" style="cursor:pointer">
+          <td style="padding:1rem;border-bottom:1px solid rgba(108,99,255,0.05);color:var(--text-main);font-size:0.9rem">${p.name.substring(0,30)}${p.name.length>30?'...':''}</td>
+          <td style="padding:1rem;border-bottom:1px solid rgba(108,99,255,0.05)"><span class="badge-custom badge-primary">${getCategoryIcon(p.category)} ${getCategoryName(p.category)}</span></td>
+          <td style="padding:1rem;border-bottom:1px solid rgba(108,99,255,0.05);color:var(--accent);font-weight:600">${formatPrice(p.price, p.currency)}</td>
+          <td style="padding:1rem;border-bottom:1px solid rgba(108,99,255,0.05);color:var(--text-muted)">👁 ${p.views||0}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+  }
+
+  // ===== AUTO CATEGORY PREVIEW =====
+  function previewCategoryDetect() {
+    const name = document.getElementById('p-name').value;
+    const desc = document.getElementById('p-desc').value;
+    const catSelect = document.getElementById('p-category').value;
+    const preview = document.getElementById('auto-cat-preview');
+    const badge = document.getElementById('auto-cat-badge');
+
+    if (catSelect === 'auto' && (name || desc)) {
+      const detected = autoDetectCategory(name, desc);
+      const cat = getCategoryById(detected);
+      badge.textContent = `${cat.icon} ${cat.name}`;
+      preview.style.display = 'block';
+    } else if (catSelect !== 'auto') {
+      const cat = getCategoryById(catSelect);
+      badge.textContent = `${cat.icon} ${cat.name}`;
+      preview.style.display = 'block';
+    } else {
+      preview.style.display = 'none';
+    }
+  }
+
+  function previewImage() {
+    const url = document.getElementById('p-image').value.trim();
+    const preview = document.getElementById('img-preview');
+    const img = document.getElementById('img-preview-el');
+    if (url) {
+      img.src = url;
+      preview.style.display = 'block';
+    } else {
+      preview.style.display = 'none';
+    }
+  }
+
+  // ===== SUBMIT PRODUCT =====
+  function submitProduct(e) {
+    e.preventDefault();
+    const name = document.getElementById('p-name').value.trim();
+    const desc = document.getElementById('p-desc').value.trim();
+    const price = document.getElementById('p-price').value;
+    const image = document.getElementById('p-image').value.trim();
+    const tags = document.getElementById('p-tags').value.split(',').map(t => t.trim()).filter(Boolean);
+
+    if (!name || !desc || !price) {
+      showToast('تکایە خانەی پێویست پڕ بکەرەوە', 'warning');
+      return;
+    }
+
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>چاوەڕوان بە...';
+
+    setTimeout(() => {
+      const result = Products.add({
+        name,
+        description: desc,
+        price,
+        currency: document.getElementById('p-currency').value,
+        category: document.getElementById('p-category').value,
+        images: image ? [image] : [],
+        tags,
+        stock: document.getElementById('p-stock').value,
+        location: document.getElementById('p-location').value.trim(),
+        supplierInfo: currentUser
+      });
+
+      if (result.success) {
+        showToast(`✅ کالاکە سەرکەوتوانە تۆمارکرا! پۆل: ${getCategoryName(result.product.category)} ${getCategoryIcon(result.product.category)}`, 'success', 4000);
+        document.getElementById('product-form').reset();
+        document.getElementById('auto-cat-preview').style.display = 'none';
+        document.getElementById('img-preview').style.display = 'none';
+        renderOverviewStats();
+        currentUser = Auth.getCurrentUser();
+        setTimeout(() => showSection('my-products'), 1500);
+      } else {
+        showToast('هەڵەیەک ڕوویدا', 'error');
+      }
+
+      btn.disabled = false;
+      btn.innerHTML = '🚀 کالاکەم تۆمار بکە';
+    }, 500);
+  }
+
+  // ===== MY PRODUCTS =====
+  function renderMyProducts() {
+    const search = document.getElementById('my-search').value.toLowerCase();
+    const catFilter = document.getElementById('my-cat-filter').value;
+    let prods = Products.getBySupplier(currentUser.id);
+
+    if (catFilter !== 'all') prods = prods.filter(p => p.category === catFilter);
+    if (search) prods = prods.filter(p =>
+      p.name.toLowerCase().includes(search) || p.description.toLowerCase().includes(search)
+    );
+
+    document.getElementById('my-products-count').textContent = `${prods.length} کالا`;
+    const tbody = document.getElementById('my-products-tbody');
+
+    if (!prods.length) {
+      tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">🔍</div><h4>کالایەک نەدۆزرایەوە</h4></div></td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = prods.map(p => `
+      <tr>
+        <td>
+          <div style="font-weight:600;color:var(--text-light)">${p.name.substring(0,35)}${p.name.length>35?'...':''}</div>
+          <div style="font-size:0.75rem;color:var(--text-muted)">${timeAgo(p.createdAt)}</div>
+        </td>
+        <td><span class="badge-custom badge-primary">${getCategoryIcon(p.category)} ${getCategoryName(p.category)}</span>
+          ${p.autoDetected ? '<br><small style="color:var(--text-muted);font-size:0.7rem">⚡ خۆکار</small>' : ''}
+        </td>
+        <td style="color:var(--accent);font-weight:600">${formatPrice(p.price, p.currency)}</td>
+        <td>${p.stock || 0}</td>
+        <td>👁 ${p.views || 0}</td>
+        <td>
+          <span class="badge-custom ${p.active ? 'badge-success' : 'badge-danger'}">
+            ${p.active ? '✅ بەردەست' : '⛔ ناچالاک'}
+          </span>
+        </td>
+        <td>
+          <div class="d-flex gap-1 flex-wrap">
+            <button class="filter-btn" onclick="openEdit('${p.id}')" title="ویرایستن" style="padding:0.3rem 0.6rem">✏️</button>
+            <button class="filter-btn" onclick="toggleProductActive('${p.id}')" title="چالاک/ناچالاک" style="padding:0.3rem 0.6rem">
+              ${p.active ? '⛔' : '✅'}
+            </button>
+            <a class="filter-btn" href="product.html?id=${p.id}" target="_blank" title="بینین" style="padding:0.3rem 0.6rem;text-decoration:none">👁</a>
+            <button class="filter-btn" onclick="openDelete('${p.id}')" title="سڕینەوە" style="padding:0.3rem 0.6rem;color:var(--danger)">🗑️</button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  // ===== EDIT =====
+  function openEdit(id) {
+    const p = Products.getById(id);
+    if (!p) return;
+    document.getElementById('edit-id').value = id;
+    document.getElementById('edit-name').value = p.name;
+    document.getElementById('edit-desc').value = p.description;
+    document.getElementById('edit-price').value = p.price;
+    document.getElementById('edit-currency').value = p.currency;
+    document.getElementById('edit-category').value = p.category;
+    document.getElementById('edit-stock').value = p.stock || 0;
+    document.getElementById('edit-image').value = p.images?.[0] || '';
+    editModal.show();
+  }
+
+  function saveEdit() {
+    const id = document.getElementById('edit-id').value;
+    const result = Products.update(id, {
+      name: document.getElementById('edit-name').value.trim(),
+      description: document.getElementById('edit-desc').value.trim(),
+      price: parseFloat(document.getElementById('edit-price').value),
+      currency: document.getElementById('edit-currency').value,
+      category: document.getElementById('edit-category').value,
+      stock: parseInt(document.getElementById('edit-stock').value),
+      images: document.getElementById('edit-image').value ? [document.getElementById('edit-image').value] : []
+    }, currentUser.id);
+
+    if (result.success) {
+      showToast('✅ کالاکە نوێکرایەوە', 'success');
+      editModal.hide();
+      renderMyProducts();
+      renderOverviewStats();
+    } else {
+      showToast(result.msg, 'error');
+    }
+  }
+
+  // ===== DELETE =====
+  function openDelete(id) {
+    document.getElementById('delete-id').value = id;
+    deleteModal.show();
+  }
+
+  function confirmDelete() {
+    const id = document.getElementById('delete-id').value;
+    const result = Products.remove(id, currentUser.id);
+    if (result.success) {
+      showToast('🗑️ کالاکە سڕایەوە', 'info');
+      deleteModal.hide();
+      renderMyProducts();
+      renderOverviewStats();
+    } else {
+      showToast(result.msg, 'error');
+    }
+  }
+
+  // ===== TOGGLE ACTIVE =====
+  function toggleProductActive(id) {
+    const result = Products.toggleActive(id, currentUser.id);
+    if (result.success) {
+      showToast(result.active ? '✅ کالاکە چالاک کرا' : '⛔ کالاکە ناچالاک کرا', 'info');
+      renderMyProducts();
+      renderOverviewStats();
+    }
+  }
+
+  // ===== PROFILE =====
+  function fillProfileForm() {
+    currentUser = Auth.getCurrentUser();
+    document.getElementById('prof-name').value = currentUser.name || '';
+    document.getElementById('prof-phone').value = currentUser.phone || '';
+    document.getElementById('prof-company').value = currentUser.company || '';
+    document.getElementById('prof-desc').value = currentUser.description || '';
+    document.getElementById('profile-name').textContent = currentUser.name;
+    document.getElementById('profile-company').textContent = currentUser.company || '';
+    document.getElementById('profile-avatar').textContent = currentUser.avatar || currentUser.name.charAt(0);
+  }
+
+  function saveProfile(e) {
+    e.preventDefault();
+    Auth.updateUser({
+      name: document.getElementById('prof-name').value.trim(),
+      phone: document.getElementById('prof-phone').value.trim(),
+      company: document.getElementById('prof-company').value.trim(),
+      description: document.getElementById('prof-desc').value.trim(),
+      avatar: document.getElementById('prof-name').value.charAt(0).toUpperCase()
+    });
+    currentUser = Auth.getCurrentUser();
+    fillUserInfo();
+    fillProfileForm();
+    showToast('✅ پرۆفایلت نوێکرایەوە', 'success');
+  }
+</script>
+</body>
+</html>

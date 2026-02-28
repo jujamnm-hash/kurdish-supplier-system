@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ku" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>دابینکەر مارکێت | سیستەمی کالا و ریکلام</title>
+  <meta name="description" content="سیستەمی پێشکەوتوی دابینکەران — کالاکانت تۆمار بکە، پۆلبندی خۆکار، ریکلامی ئۆتۆماتیک" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<!-- NAVBAR -->
+<div id="navbar-placeholder" data-active="home"></div>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loading-overlay" style="display:none">
+  <div class="spinner-custom"></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- ===== ADS TICKER ===== -->
+<div class="ads-banner" id="ads-ticker" style="padding:0.6rem 1.5rem">
+  <div class="ads-marquee" id="ads-marquee">
+    <span class="ads-item">⏳ چاوەڕوانبە...</span>
+  </div>
+</div>
+
+<!-- ===== HERO ===== -->
+<section class="hero-section">
+  <div class="container position-relative" style="z-index:2">
+    <div class="row align-items-center gy-5">
+      <div class="col-lg-7">
+        <div class="featured-badge">
+          <i class="bi bi-stars"></i> سیستەمی پێشکەوتوی دابینکەران
+        </div>
+        <h1 class="hero-title">
+          کالاکانت<br/>بۆ ئەوەرە بکە،<br/>
+          <span style="color:var(--accent);-webkit-text-fill-color:var(--accent)">جیهان ببینیتەوە</span>
+        </h1>
+        <p class="hero-subtitle">
+          بەشێک بە دابینکەر — کالاکانت تۆمار بکە، سیستەمەکە خۆکارانە پۆلبندی دەکات،<br/>
+          ریکلامی خۆکار دەکرێت بۆ هەزاران کڕیار.
+        </p>
+        <div class="d-flex flex-wrap gap-3">
+          <a href="register.html" class="btn-primary-custom">
+            <i class="bi bi-person-plus"></i> دابینکەر بە
+          </a>
+          <a href="#products" class="btn-outline-custom">
+            <i class="bi bi-grid"></i> کالاکان ببینە
+          </a>
+        </div>
+        <div class="hero-stats">
+          <div class="hero-stat">
+            <span class="number" id="stat-products">٠</span>
+            <span class="label">کالا</span>
+          </div>
+          <div class="hero-stat">
+            <span class="number" id="stat-suppliers">٠</span>
+            <span class="label">دابینکەر</span>
+          </div>
+          <div class="hero-stat">
+            <span class="number" id="stat-categories">٨</span>
+            <span class="label">پۆل</span>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-5">
+        <div class="glass-card p-4" style="background:rgba(30,30,58,0.6)">
+          <h5 class="mb-3" style="color:var(--text-light)"><i class="bi bi-search"></i> گەڕان بکە</h5>
+          <div class="search-container mb-3">
+            <input type="text" id="search-input" class="search-input" placeholder="ناوی کالا، جۆر، دابینکەر..."/>
+            <button class="search-btn" onclick="doSearch()">
+              <i class="bi bi-search"></i>
+            </button>
+          </div>
+          <div class="d-flex flex-wrap gap-2" id="quick-cats">
+            <!-- filled by JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CATEGORIES ===== -->
+<section class="py-5" id="categories">
+  <div class="container">
+    <div class="text-center mb-4">
+      <div class="section-divider mx-auto"></div>
+      <h2 class="section-title">📂 پۆلەکان</h2>
+      <p class="section-subtitle">کالاکانت بەپێی پۆل دۆزەرەوە</p>
+    </div>
+    <div class="row g-3 stagger" id="categories-grid">
+      <!-- filled by JS -->
+    </div>
+  </div>
+</section>
+
+<!-- ===== FEATURED ===== -->
+<section class="py-5" style="background:rgba(108,99,255,0.03);border-top:1px solid var(--card-border);border-bottom:1px solid var(--card-border)">
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-2">
+      <div>
+        <div class="section-divider"></div>
+        <h2 class="section-title">⭐ بەناوبانگترینەکان</h2>
+        <p class="section-subtitle mb-0">کالاکانی زۆرترین بینین</p>
+      </div>
+    </div>
+    <div class="row g-4 stagger" id="featured-grid">
+      <!-- filled by JS -->
+    </div>
+  </div>
+</section>
+
+<!-- ===== ALL PRODUCTS ===== -->
+<section class="py-5" id="products">
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-end mb-3 flex-wrap gap-2">
+      <div>
+        <div class="section-divider"></div>
+        <h2 class="section-title">📦 هەموو کالاکان</h2>
+        <p class="section-subtitle mb-0">
+          <span id="product-count">٠</span> کالا بەردەستە
+        </p>
+      </div>
+      <div class="d-flex gap-2 align-items-center flex-wrap">
+        <select id="sort-select" class="form-select" style="width:auto;font-size:0.9rem" onchange="applySort()">
+          <option value="newest">نوێترین</option>
+          <option value="oldest">کۆنترین</option>
+          <option value="price-low">نرخ: کەمترین</option>
+          <option value="price-high">نرخ: زۆرترین</option>
+          <option value="popular">بەناوبانگترین</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar" id="filter-bar">
+      <span style="color:var(--text-muted);font-size:0.85rem">پۆل:</span>
+      <!-- filled by JS -->
+    </div>
+
+    <!-- Products Grid -->
+    <div class="row g-4" id="products-grid">
+      <!-- filled by JS -->
+    </div>
+
+    <!-- Pagination -->
+    <div id="pagination-container"></div>
+  </div>
+</section>
+
+<!-- ===== JOIN BANNER ===== -->
+<section class="py-5">
+  <div class="container">
+    <div class="glass-card text-center p-5" style="background:linear-gradient(135deg,rgba(108,99,255,0.1),rgba(67,233,123,0.05));border-color:rgba(108,99,255,0.3)">
+      <div style="font-size:3rem;margin-bottom:1rem">🚀</div>
+      <h3 class="section-title" style="font-size:1.75rem">تۆش دابینکەر بە!</h3>
+      <p class="section-subtitle">کالاکانت تۆمار بکە، پۆلبندی خۆکار دەبێت، ریکلامی خۆکار دەکرێت</p>
+      <div class="d-flex justify-content-center gap-3 flex-wrap mt-4">
+        <a href="register.html" class="btn-primary-custom"><i class="bi bi-person-plus"></i> ئێستا تۆمار بکە</a>
+        <a href="login.html" class="btn-outline-custom"><i class="bi bi-box-arrow-in-right"></i> چوونەژوورەوە</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer class="footer">
+  <div class="container">
+    <div class="row g-4">
+      <div class="col-lg-4">
+        <div class="footer-brand">
+          <h3>✦ دابینکەر مارکێت</h3>
+          <p class="mt-2" style="color:var(--text-muted);font-size:0.9rem;line-height:1.8">
+            سیستەمی هوشمەندانەی بازاری ئۆنلاین بۆ دابینکەران.
+            کالاکانت تۆمار بکە و پۆلبندی خۆکار بگرەوە.
+          </p>
+        </div>
+      </div>
+      <div class="col-lg-2 col-sm-4">
+        <div class="footer-links">
+          <h5>بەستەرەکان</h5>
+          <a href="index.html">🏠 سەرەکی</a>
+          <a href="register.html">📋 تۆمارکردن</a>
+          <a href="login.html">🔑 چوونەژوورەوە</a>
+          <a href="dashboard.html">📊 داشبۆرد</a>
+        </div>
+      </div>
+      <div class="col-lg-3 col-sm-4">
+        <div class="footer-links">
+          <h5>پۆلەکان</h5>
+          <a href="index.html?cat=tech">💻 تەکنەلۆژیا</a>
+          <a href="index.html?cat=fashion">👔 جل و بەرگ</a>
+          <a href="index.html?cat=food">🍽️ خواردن</a>
+          <a href="index.html?cat=health">💊 تەندروستی</a>
+        </div>
+      </div>
+      <div class="col-lg-3 col-sm-4">
+        <div class="footer-links">
+          <h5>دەربارە</h5>
+          <p style="color:var(--text-muted);font-size:0.85rem;line-height:1.8">
+            سیستەمی دابینکەر مارکێت بۆ ئەوە پێک هاتووە کە دابینکەران بتوانن بەئاسانی کالاکانیان بۆ خەریداران پیشان بدەن.
+          </p>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© ٢٠٢٦ دابینکەر مارکێت — هەموو مافەکان پارێزراون</p>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+<script src="js/categories.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/products.js"></script>
+<script src="js/app.js"></script>
+<script>
+  // State
+  let currentCategory = 'all';
+  let currentPage = 1;
+  let currentSort = 'newest';
+  let searchQuery = '';
+  const PER_PAGE = 12;
+
+  // Auto-load category from URL
+  const urlParams = new URLSearchParams(location.search);
+  const urlCat = urlParams.get('cat');
+  if (urlCat) currentCategory = urlCat;
+
+  document.addEventListener('DOMContentLoaded', function() {
+    renderStats();
+    renderCategories();
+    renderFeatured();
+    renderFilterBar();
+    renderProducts();
+    buildAdsTickerInit();
+
+    // Search on Enter
+    document.getElementById('search-input').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') doSearch();
+    });
+
+    // Scroll to products if URL has anchor
+    if (urlParams.get('cat')) {
+      setTimeout(() => document.getElementById('products')?.scrollIntoView({ behavior: 'smooth' }), 500);
+    }
+  });
+
+  function renderStats() {
+    const prods = Products.getAll().filter(p => p.active);
+    const supp = new Set(prods.map(p => p.supplierId)).size;
+    document.getElementById('stat-products').textContent = prods.length;
+    document.getElementById('stat-suppliers').textContent = supp;
+  }
+
+  function renderCategories() {
+    const cats = CATEGORIES;
+    const counts = Products.getCategoryCounts();
+    const grid = document.getElementById('categories-grid');
+    const quickCats = document.getElementById('quick-cats');
+
+    grid.innerHTML = cats.slice(0, 8).map(cat => `
+      <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+        <a href="index.html?cat=${cat.id}" class="category-card ${cat.id === currentCategory ? 'active' : ''}">
+          <span class="cat-icon">${cat.icon}</span>
+          <div class="cat-name">${cat.name}</div>
+          <div class="cat-count">${counts[cat.id] || 0} کالا</div>
+        </a>
+      </div>
+    `).join('');
+
+    quickCats.innerHTML = cats.slice(0, 6).map(cat => `
+      <button class="filter-btn" onclick="location.href='index.html?cat=${cat.id}'" style="font-size:0.8rem">
+        ${cat.icon} ${cat.name}
+      </button>
+    `).join('');
+  }
+
+  function renderFeatured() {
+    const featured = Products.getFeatured(4);
+    const grid = document.getElementById('featured-grid');
+    if (!featured.length) {
+      grid.innerHTML = '<div class="col-12"><div class="empty-state"><div class="empty-icon">📦</div><h4>هێشتا کالایەک نییە</h4></div></div>';
+      return;
+    }
+    grid.innerHTML = featured.map(p => `
+      <div class="col-sm-6 col-lg-3">${buildProductCard(p)}</div>
+    `).join('');
+  }
+
+  function renderFilterBar() {
+    const bar = document.getElementById('filter-bar');
+    const allCats = getAllCategories();
+    const counts = Products.getCategoryCounts();
+
+    bar.innerHTML = `<span style="color:var(--text-muted);font-size:0.85rem">پۆل:</span>` +
+      allCats.map(cat => `
+        <button class="filter-btn ${cat.id === currentCategory ? 'active' : ''}"
+          onclick="setCategory('${cat.id}')">
+          ${cat.icon} ${cat.name}
+          ${cat.id !== 'all' ? `<small style="opacity:0.6">(${counts[cat.id] || 0})</small>` : ''}
+        </button>
+      `).join('');
+  }
+
+  function getFilteredProducts() {
+    let items;
+    if (searchQuery) {
+      items = Products.search(searchQuery);
+    } else {
+      items = Products.getByCategory(currentCategory);
+    }
+
+    // Sort
+    switch (currentSort) {
+      case 'oldest': items = items.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt)); break;
+      case 'price-low': items = items.sort((a, b) => a.price - b.price); break;
+      case 'price-high': items = items.sort((a, b) => b.price - a.price); break;
+      case 'popular': items = items.sort((a, b) => (b.views || 0) - (a.views || 0)); break;
+      default: items = items.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    }
+
+    return items;
+  }
+
+  function renderProducts() {
+    const all = getFilteredProducts();
+    const paginated = paginate(all, currentPage, PER_PAGE);
+    const grid = document.getElementById('products-grid');
+    const countEl = document.getElementById('product-count');
+
+    countEl.textContent = all.length;
+
+    if (!paginated.items.length) {
+      grid.innerHTML = `
+        <div class="col-12">
+          <div class="empty-state">
+            <div class="empty-icon">🔍</div>
+            <h4>کالایەک نەدۆزرایەوە</h4>
+            <p>گەڕانەکەت بگۆڕە یان پۆلێکی تر هەڵبژێرە</p>
+          </div>
+        </div>`;
+      document.getElementById('pagination-container').innerHTML = '';
+      return;
+    }
+
+    grid.innerHTML = paginated.items.map(p =>
+      `<div class="col-sm-6 col-lg-4 col-xl-3">${buildProductCard(p)}</div>`
+    ).join('');
+
+    document.getElementById('pagination-container').innerHTML =
+      buildPagination(paginated, 'goPage');
+  }
+
+  function goPage(page) {
+    currentPage = page;
+    renderProducts();
+    document.getElementById('products').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function setCategory(catId) {
+    currentCategory = catId;
+    currentPage = 1;
+    searchQuery = '';
+    document.getElementById('search-input').value = '';
+    renderFilterBar();
+    renderProducts();
+    document.getElementById('products').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function doSearch() {
+    searchQuery = document.getElementById('search-input').value.trim();
+    currentCategory = 'all';
+    currentPage = 1;
+    renderFilterBar();
+    renderProducts();
+    if (searchQuery) {
+      document.getElementById('products').scrollIntoView({ behavior: 'smooth' });
+    }
+  }
+
+  function applySort() {
+    currentSort = document.getElementById('sort-select').value;
+    currentPage = 1;
+    renderProducts();
+  }
+
+  function buildAdsTickerInit() {
+    const products = Products.getFeatured(10);
+    const marquee = document.getElementById('ads-marquee');
+    if (marquee && products.length) {
+      marquee.innerHTML = buildAdsMarquee(products);
+    }
+  }
+</script>
+</body>
+</html>
