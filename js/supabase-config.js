@@ -14,11 +14,9 @@
 //
 // =====================================================
 
-const SUPABASE_URL = 'YOUR_SUPABASE_URL';
-// نموونە: 'https://abcdefghijklmnop.supabase.co'
+const SUPABASE_URL = 'https://yjvzmudmeccieudjgtxk.supabase.co';
 
-const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
-// نموونە: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+const SUPABASE_ANON_KEY = 'sb_publishable_ED2WqR3tGYtFsuxyC4cK1Q_CLadGEdg';
 
 // =====================================================
 // دروست کردنی کلایەنتی Supabase
@@ -27,7 +25,9 @@ let _supabase = null;
 
 try {
   if (
+    SUPABASE_URL &&
     SUPABASE_URL !== 'YOUR_SUPABASE_URL' &&
+    SUPABASE_ANON_KEY &&
     SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY' &&
     typeof window !== 'undefined' &&
     window.supabase
