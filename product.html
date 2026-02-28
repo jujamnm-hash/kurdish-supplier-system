@@ -20,6 +20,61 @@
   </div>
 </div>
 
+<!-- Reviews Section -->
+<section class="py-5" id="reviews-section" style="border-top:1px solid var(--card-border)">
+  <div class="container">
+    <div class="section-divider"></div>
+    <h3 class="section-title mb-1">⭐ بەیانە و دەنگە</h3>
+    <p class="section-subtitle">بوচی خەریدارانی وەریگەر</p>
+
+    <!-- Stats + Form Row -->
+    <div class="row g-4 mb-4">
+      <!-- Rating Stats -->
+      <div class="col-lg-4">
+        <div class="glass-card p-4 text-center" id="review-stats">
+          <div id="avg-score" style="font-size:3.5rem;font-weight:800;color:var(--accent);line-height:1">-</div>
+          <div id="avg-stars" style="font-size:1.6rem;margin:0.5rem 0"></div>
+          <div id="review-count" style="color:var(--text-muted);font-size:0.9rem"></div>
+          <div id="dist-bars" class="mt-3"></div>
+        </div>
+      </div>
+
+      <!-- Add Review Form -->
+      <div class="col-lg-8">
+        <div class="glass-card p-4">
+          <h6 style="color:var(--text-light);margin-bottom:1rem">✍️ بەیانەکەت بنیسە</h6>
+          <form id="review-form" onsubmit="submitReview(event)">
+            <!-- Star picker -->
+            <div class="mb-3">
+              <label class="form-label">دەنگە <span style="color:var(--danger)">*</span></label>
+              <div id="star-picker" style="display:flex;gap:0.35rem;font-size:2rem;cursor:pointer">
+                <span data-v="1" onclick="pickStar(1)" style="color:var(--border);">&#9733;</span>
+                <span data-v="2" onclick="pickStar(2)" style="color:var(--border);">&#9733;</span>
+                <span data-v="3" onclick="pickStar(3)" style="color:var(--border);">&#9733;</span>
+                <span data-v="4" onclick="pickStar(4)" style="color:var(--border);">&#9733;</span>
+                <span data-v="5" onclick="pickStar(5)" style="color:var(--border);">&#9733;</span>
+              </div>
+              <input type="hidden" id="review-rating" value="0"/>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">ناوت</label>
+              <input type="text" id="review-name" class="form-control" placeholder="ناوت (هەڵبژیرە)"/>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">بەیانەکە</label>
+              <textarea id="review-text" class="form-control" rows="3" placeholder="بێرووتەکەت ..."></textarea>
+            </div>
+            <button type="submit" class="btn-primary-custom">⭐ نێردنی بەیانە</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reviews List -->
+    <div id="reviews-list"></div>
+  </div>
+</section>
+
 <!-- Related Products -->
 <section class="py-5" id="related-section" style="display:none;border-top:1px solid var(--card-border)">
   <div class="container">
@@ -87,6 +142,8 @@
 <script src="js/favorites.js"></script>
 <script src="js/recently.js"></script>
 <script src="js/notifications.js"></script>
+<script src="js/reviews.js"></script>
+<script src="js/compare.js"></script>
 <script src="js/app.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', () => {
@@ -121,6 +178,7 @@
     renderProduct(product);
     renderRelated(product);
     renderRecentlyViewed(id);
+    renderReviews(id);
   });
 
   function renderProduct(p) {
@@ -290,6 +348,87 @@
     document.getElementById('recently-viewed-grid').innerHTML = products.map(p =>
       `<div class="col-sm-6 col-lg-3">${buildProductCard(p)}</div>`
     ).join('');
+  }
+
+  // ===== REVIEWS =====
+  let currentProductId = null;
+
+  function renderReviews(productId) {
+    currentProductId = productId;
+    const stats = Reviews.getStats(productId);
+    const reviews = Reviews.getByProduct(productId);
+
+    // Stats
+    document.getElementById('avg-score').textContent = stats.count ? stats.avg : '-';
+    document.getElementById('avg-stars').innerHTML = stats.count ? Reviews.starsHTML(Math.round(stats.avg), '1.4rem') : '';
+    document.getElementById('review-count').textContent = stats.count ? stats.count + ' بەیانه' : 'هێشتا بەیانەیەک نییە';
+    document.getElementById('dist-bars').innerHTML = [5,4,3,2,1].map(star => {
+      const cnt = stats.distribution[star] || 0;
+      const pct = stats.count ? Math.round((cnt / stats.count) * 100) : 0;
+      return `<div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem;font-size:0.8rem">
+        <span style="color:#f7971e;width:24px">${star}★</span>
+        <div style="flex:1;height:6px;background:var(--border);border-radius:3px">
+          <div style="height:100%;width:${pct}%;background:#f7971e;border-radius:3px"></div>
+        </div>
+        <span style="color:var(--text-muted);width:20px">${cnt}</span>
+      </div>`;
+    }).join('');
+
+    // List
+    const list = document.getElementById('reviews-list');
+    if (!reviews.length) {
+      list.innerHTML = `<div class="empty-state"><div class="empty-icon">⭐</div><h4>هێشتا بەیانەیەک نییە</h4><p>یەکەم بǔ بیتە بەیانەکەت بنیسە</p></div>`;
+      return;
+    }
+    list.innerHTML = reviews.map(r => `
+      <div class="glass-card p-3 mb-3">
+        <div class="d-flex align-items-center justify-content-between mb-2 flex-wrap gap-2">
+          <div class="d-flex align-items-center gap-2">
+            <div class="supplier-avatar" style="width:38px;height:38px;font-size:1rem;background:var(--gradient)">${r.name.charAt(0)}</div>
+            <div>
+              <div style="font-weight:600;color:var(--text-light);font-size:0.9rem">${r.name}</div>
+              <div style="font-size:0.75rem;color:var(--text-muted)">${timeAgo(r.time)}</div>
+            </div>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            ${Reviews.starsHTML(r.rating)}
+            <button onclick="removeReview('${productId}','${r.id}')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.8rem;opacity:0.5">×</button>
+          </div>
+        </div>
+        ${r.text ? `<p style="color:var(--text-main);font-size:0.9rem;line-height:1.7;margin:0">${r.text}</p>` : ''}
+      </div>`).join('');
+  }
+
+  let pickedStar = 0;
+  function pickStar(value) {
+    pickedStar = value;
+    document.getElementById('review-rating').value = value;
+    document.querySelectorAll('#star-picker span').forEach((el, i) => {
+      el.style.color = i < value ? '#f7971e' : 'var(--border)';
+    });
+  }
+
+  function submitReview(e) {
+    e.preventDefault();
+    if (!currentProductId) return;
+    const rating = parseInt(document.getElementById('review-rating').value);
+    if (!rating) { showToast('تکایە دەنگەکە هەڵبژێرە!', 'warning'); return; }
+    Reviews.add(currentProductId, {
+      rating,
+      text: document.getElementById('review-text').value,
+      name: document.getElementById('review-name').value
+    });
+    showToast('✅ بەیانەکەت زیادکرا!', 'success');
+    document.getElementById('review-form').reset();
+    pickedStar = 0;
+    document.querySelectorAll('#star-picker span').forEach(el => el.style.color = 'var(--border)');
+    document.getElementById('review-rating').value = 0;
+    renderReviews(currentProductId);
+  }
+
+  function removeReview(productId, reviewId) {
+    Reviews.remove(productId, reviewId);
+    renderReviews(productId);
   }
 
   function sendContactMessage(e) {

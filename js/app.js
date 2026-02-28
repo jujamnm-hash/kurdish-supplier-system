@@ -65,6 +65,19 @@ function buildProductCard(product, showBadgeNew = false) {
 
   const isNew = (Date.now() - new Date(product.createdAt).getTime()) < 3 * 24 * 3600 * 1000;
   const isFaved = typeof Favorites !== 'undefined' && Favorites.isFav(product.id);
+  const isCompared = typeof Compare !== 'undefined' && Compare.has(product.id);
+
+  // Star rating summary
+  let starsRow = '';
+  if (typeof Reviews !== 'undefined') {
+    const stats = Reviews.getStats(product.id);
+    if (stats.count > 0) {
+      starsRow = `<div style="display:flex;align-items:center;gap:0.35rem;margin-bottom:0.35rem">
+        ${Reviews.starsHTML(Math.round(stats.avg), '0.85rem')}
+        <span style="font-size:0.75rem;color:var(--text-muted)">(${stats.count})</span>
+      </div>`;
+    }
+  }
 
   return `
     <div class="product-card fade-in">
@@ -78,9 +91,17 @@ function buildProductCard(product, showBadgeNew = false) {
           style="position:absolute;bottom:10px;left:10px;background:rgba(26,26,46,0.85);border:none;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;z-index:2;font-size:1rem">
           ${isFaved ? '❤️' : '🤍'}
         </button>
+        ${typeof Compare !== 'undefined' ? `
+        <button
+          onclick="event.stopPropagation();toggleCompareCard('${product.id}',this)"
+          title="بەراورد"
+          style="position:absolute;bottom:10px;right:10px;background:${isCompared ? 'var(--primary)' : 'rgba(26,26,46,0.85)'};border:none;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s;z-index:2;font-size:0.8rem;color:white">
+          ⚖️
+        </button>` : ''}
       </div>
       <div class="card-body" onclick="location.href='product.html?id=${product.id}'" style="cursor:pointer">
         <div class="product-name">${product.name}</div>
+        ${starsRow}
         <div class="product-desc">${product.description}</div>
         <div class="product-price">
           ${formatPrice(product.price, product.currency)}
@@ -101,6 +122,18 @@ function buildProductCard(product, showBadgeNew = false) {
       </div>
     </div>
   `;
+}
+
+// Toggle compare from card
+function toggleCompareCard(productId, btn) {
+  if (typeof Compare === 'undefined') return;
+  const result = Compare.toggle(productId);
+  if (result.full) {
+    showToast('⚖️ زیاتر لە ٣ کالا دەتوانیت بەراورد بکەی', 'warning', 2500);
+    return;
+  }
+  btn.style.background = result.added ? 'var(--primary)' : 'rgba(26,26,46,0.85)';
+  if (typeof renderCompareBar !== 'undefined') renderCompareBar();
 }
 
 // Toggle favorite

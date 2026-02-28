@@ -72,11 +72,16 @@
       <div class="col-lg-5">
         <div class="glass-card p-4" style="background:rgba(30,30,58,0.6)">
           <h5 class="mb-3" style="color:var(--text-light)"><i class="bi bi-search"></i> گەڕان بکە</h5>
-          <div class="search-container mb-3">
-            <input type="text" id="search-input" class="search-input" placeholder="ناوی کالا، جۆر، دابینکەر..."/>
+          <div class="search-container mb-3" style="position:relative">
+            <input type="text" id="search-input" class="search-input" placeholder="ناوی کالا، جۆر، دابینکەر..."
+              autocomplete="off"
+              oninput="onSearchInput(this.value)"
+              onfocus="onSearchInput(this.value)"
+              onblur="setTimeout(hideAutocomplete, 200)"/>
             <button class="search-btn" onclick="doSearch()">
               <i class="bi bi-search"></i>
             </button>
+            <div id="autocomplete-dropdown" style="display:none;position:absolute;top:100%;right:0;left:0;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);z-index:999;max-height:220px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.3)"></div>
           </div>
           <div class="d-flex flex-wrap gap-2" id="quick-cats">
             <!-- filled by JS -->
@@ -239,13 +244,37 @@
     </div>
   </div>
 </footer>
+<!-- ===== COMPARE FLOATING BAR ===== -->
+<div id="compare-bar" style="display:none;position:fixed;bottom:0;right:0;left:0;background:var(--bg-card);border-top:2px solid var(--primary);z-index:1050;padding:0.75rem 1rem">
+  <div class="container d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <div class="d-flex align-items-center gap-3" id="compare-items"></div>
+    <div class="d-flex gap-2">
+      <button class="btn-primary-custom" onclick="openCompareModal()" style="padding:0.5rem 1.25rem">⚖️ بەراوردکردن</button>
+      <button class="btn-outline-custom" onclick="clearCompare()" style="padding:0.5rem 1rem">× پاککردنەوە</button>
+    </div>
+  </div>
+</div>
 
+<!-- ===== COMPARE MODAL ===== -->
+<div class="modal fade" id="compareModal" tabindex="-1">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content" style="background:var(--bg-card);border:1px solid var(--card-border);border-radius:var(--radius)">
+      <div class="modal-header" style="border-bottom:1px solid var(--card-border)">
+        <h5 class="modal-title" style="color:var(--text-light)">⚖️ بەراوردکردنی کالاکان</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="compare-modal-body" style="overflow-x:auto;padding:1.5rem"></div>
+    </div>
+  </div>
+</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
 <script src="js/categories.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/products.js"></script>
 <script src="js/favorites.js"></script>
 <script src="js/recently.js"></script>
+<script src="js/reviews.js"></script>
+<script src="js/compare.js"></script>
 <script src="js/app.js"></script>
 <script>
   // State
@@ -271,6 +300,8 @@
     renderProducts();
     buildAdsTickerInit();
     renderRecentlyViewedHome();
+    renderCompareBar();
+    initAutocomplete();
 
     // Search on Enter
     document.getElementById('search-input').addEventListener('keypress', function(e) {
@@ -459,6 +490,122 @@
     grid.innerHTML = products.map(p =>
       `<div class="col-sm-6 col-lg-3">${buildProductCard(p)}</div>`
     ).join('');
+  }
+
+  // ===== AUTOCOMPLETE =====
+  function initAutocomplete() {
+    const input = document.getElementById('search-input');
+    if (!input) return;
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') { hideAutocomplete(); doSearch(); }
+      if (e.key === 'Escape') hideAutocomplete();
+    });
+  }
+
+  function onSearchInput(val) {
+    const drop = document.getElementById('autocomplete-dropdown');
+    if (!val || val.length < 2) { drop.style.display = 'none'; return; }
+    const results = Products.search(val).slice(0, 7);
+    if (!results.length) { drop.style.display = 'none'; return; }
+    drop.innerHTML = results.map(p => `
+      <div onclick="selectSuggestion('${p.name.replace(/'/g,"\\'")}')"
+        style="padding:0.7rem 1rem;cursor:pointer;display:flex;align-items:center;gap:0.75rem;font-size:0.9rem;border-bottom:1px solid rgba(108,99,255,0.07);transition:background .15s"
+        onmouseover="this.style.background='rgba(108,99,255,0.12)'"
+        onmouseout="this.style.background='none'">
+        <span>${getCategoryIcon(p.category)}</span>
+        <div>
+          <div style="color:var(--text-light)">${p.name}</div>
+          <div style="font-size:0.75rem;color:var(--text-muted)">${getCategoryName(p.category)} — ${formatPrice(p.price, p.currency)}</div>
+        </div>
+      </div>`).join('');
+    drop.style.display = 'block';
+  }
+
+  function selectSuggestion(name) {
+    document.getElementById('search-input').value = name;
+    hideAutocomplete();
+    doSearch();
+  }
+
+  function hideAutocomplete() {
+    const drop = document.getElementById('autocomplete-dropdown');
+    if (drop) drop.style.display = 'none';
+  }
+
+  // ===== COMPARE =====
+  function renderCompareBar() {
+    const bar = document.getElementById('compare-bar');
+    if (!bar || typeof Compare === 'undefined') return;
+    const products = Compare.getProducts();
+    if (!products.length) { bar.style.display = 'none'; return; }
+    bar.style.display = 'block';
+    document.getElementById('compare-items').innerHTML = products.map(p => `
+      <div style="display:flex;align-items:center;gap:0.5rem;background:rgba(108,99,255,0.08);padding:0.4rem 0.75rem;border-radius:50px;font-size:0.85rem">
+        <span style="color:var(--text-light)">${p.name.length > 18 ? p.name.slice(0,18)+'...' : p.name}</span>
+        <button onclick="removeFromCompare('${p.id}')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.9rem;line-height:1">×</button>
+      </div>`).join('');
+  }
+
+  function removeFromCompare(id) {
+    Compare.toggle(id);
+    renderCompareBar();
+    renderProducts();
+  }
+
+  function clearCompare() {
+    Compare.clear();
+    renderCompareBar();
+    renderProducts();
+  }
+
+  function openCompareModal() {
+    const products = Compare.getProducts();
+    if (products.length < 2) { showToast('تکایە دوو کالا یا زیاتر هەڵبژێرە', 'warning'); return; }
+
+    const fields = [
+      { key: 'name',        label: 'ناو', fn: p => p.name },
+      { key: 'price',       label: 'نرخ', fn: p => formatPrice(p.price, p.currency) },
+      { key: 'category',    label: 'پۆل', fn: p => getCategoryIcon(p.category) + ' ' + getCategoryName(p.category) },
+      { key: 'stock',       label: 'ستۆک', fn: p => p.stock || '-' },
+      { key: 'location',    label: 'شوێن', fn: p => p.location || '-' },
+      { key: 'views',       label: 'بینین', fn: p => '👁 ' + (p.views || 0) },
+      { key: 'supplier',    label: 'دابینکەر', fn: p => p.supplierCompany || p.supplierName },
+      { key: 'rating',      label: 'دەنگە', fn: p => {
+          const s = Reviews.getStats(p.id);
+          return s.count ? Reviews.starsHTML(Math.round(s.avg)) + ' (' + s.avg + ')' : '-';
+        }
+      },
+      { key: 'created',     label: 'تۆمارکرا', fn: p => timeAgo(p.createdAt) }
+    ];
+
+    let table = `<table style="border-collapse:collapse;width:100%;min-width:${products.length * 200}px">`;
+    // Header row
+    table += `<tr><th style="padding:1rem;color:var(--text-muted);font-size:0.85rem;border-bottom:1px solid var(--card-border);min-width:100px">ویژە</th>`;
+    products.forEach(p => {
+      const img = p.images?.[0]
+        ? `<img src="${p.images[0]}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;display:block;margin:0 auto 0.5rem">`
+        : `<div style="width:80px;height:80px;border-radius:8px;background:var(--bg-sec);display:flex;align-items:center;justify-content:center;font-size:2rem;margin:0 auto 0.5rem">${getCategoryIcon(p.category)}</div>`;
+      table += `<th style="padding:1rem;text-align:center;border-bottom:1px solid var(--card-border);min-width:180px">
+        ${img}
+        <a href="product.html?id=${p.id}" style="color:var(--text-light);font-size:0.9rem;font-weight:600;text-decoration:none">${p.name}</a>
+      </th>`;
+    });
+    table += '</tr>';
+
+    // Data rows
+    fields.forEach((f, fi) => {
+      const bg = fi % 2 === 0 ? 'rgba(108,99,255,0.04)' : 'transparent';
+      table += `<tr style="background:${bg}">`;
+      table += `<td style="padding:0.75rem 1rem;color:var(--text-muted);font-size:0.85rem;border-bottom:1px solid rgba(108,99,255,0.06);white-space:nowrap">${f.label}</td>`;
+      products.forEach(p => {
+        table += `<td style="padding:0.75rem 1rem;text-align:center;color:var(--text-main);font-size:0.9rem;border-bottom:1px solid rgba(108,99,255,0.06)">${f.fn(p)}</td>`;
+      });
+      table += '</tr>';
+    });
+
+    table += '</table>';
+    document.getElementById('compare-modal-body').innerHTML = table;
+    new bootstrap.Modal(document.getElementById('compareModal')).show();
   }
 </script>
 </body>
